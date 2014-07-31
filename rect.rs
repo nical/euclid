@@ -27,10 +27,12 @@ impl<T: fmt::Show> fmt::Show for Rect<T> {
     }
 }
 
-pub fn Rect<T:Clone>(origin: Point2D<T>, size: Size2D<T>) -> Rect<T> {
-    Rect {
-        origin: origin,
-        size: size
+impl<T:Clone> Rect<T> {
+    pub fn new(origin: Point2D<T>, size: Size2D<T>) -> Rect<T> {
+        Rect {
+            origin: origin,
+            size: size
+        }
     }
 }
 
@@ -49,38 +51,38 @@ impl<T: Clone + PartialOrd + Add<T,T> + Sub<T,T>> Rect<T> {
             return None;
         }
 
-        let upper_left = Point2D(max(self.origin.x.clone(), other.origin.x.clone()),
-                                 max(self.origin.y.clone(), other.origin.y.clone()));
+        let upper_left = Point2D::new(max(self.origin.x.clone(), other.origin.x.clone()),
+                                      max(self.origin.y.clone(), other.origin.y.clone()));
         
-        let lower_right = Point2D(min(self.origin.x + self.size.width,
-                                      other.origin.x + other.size.width),
-                                  min(self.origin.y + self.size.height,
-                                      other.origin.y + other.size.height));
+        let lower_right = Point2D::new(min(self.origin.x + self.size.width,
+                                           other.origin.x + other.size.width),
+                                       min(self.origin.y + self.size.height,
+                                           other.origin.y + other.size.height));
             
-        Some(Rect(upper_left.clone(), Size2D(lower_right.x - upper_left.x,
-                                             lower_right.y - upper_left.y)))
+        Some(Rect::new(upper_left.clone(), Size2D::new(lower_right.x - upper_left.x,
+                                                       lower_right.y - upper_left.y)))
     }
 
     #[inline]
     pub fn union(&self, other: &Rect<T>) -> Rect<T> {
-        let upper_left = Point2D(min(self.origin.x.clone(), other.origin.x.clone()),
-                                 min(self.origin.y.clone(), other.origin.y.clone()));
+        let upper_left = Point2D::new(min(self.origin.x.clone(), other.origin.x.clone()),
+                                      min(self.origin.y.clone(), other.origin.y.clone()));
         
-        let lower_right = Point2D(max(self.origin.x + self.size.width,
-                                      other.origin.x + other.size.width),
-                                  max(self.origin.y + self.size.height,
-                                      other.origin.y + other.size.height));
+        let lower_right = Point2D::new(max(self.origin.x + self.size.width,
+                                           other.origin.x + other.size.width),
+                                       max(self.origin.y + self.size.height,
+                                           other.origin.y + other.size.height));
         
         Rect {
             origin: upper_left.clone(),
-            size: Size2D(lower_right.x - upper_left.x, lower_right.y - upper_left.y)
+            size: Size2D::new(lower_right.x - upper_left.x, lower_right.y - upper_left.y)
         }
     }
 
     #[inline]
     pub fn translate(&self, other: &Point2D<T>) -> Rect<T> {
         Rect {
-            origin: Point2D(self.origin.x + other.x, self.origin.y + other.y),
+            origin: Point2D::new(self.origin.x + other.x, self.origin.y + other.y),
             size: self.size.clone()
         }
     }
@@ -117,14 +119,14 @@ pub fn max<T:Clone + PartialOrd>(x: T, y: T) -> T {
 impl<Scale, T0: Mul<Scale, T1>, T1: Clone> Mul<Scale, Rect<T1>> for Rect<T0> {
     #[inline]
     fn mul(&self, scale: &Scale) -> Rect<T1> {
-        Rect(self.origin * *scale, self.size * *scale)
+        Rect::new(self.origin * *scale, self.size * *scale)
     }
 }
 
 impl<Scale, T0: Div<Scale, T1>, T1: Clone> Div<Scale, Rect<T1>> for Rect<T0> {
     #[inline]
     fn div(&self, scale: &Scale) -> Rect<T1> {
-        Rect(self.origin / *scale, self.size / *scale)
+        Rect::new(self.origin / *scale, self.size / *scale)
     }
 }
 
@@ -134,12 +136,12 @@ pub type TypedRect<Unit, T> = Rect<Length<Unit, T>>;
 impl<Unit, T: Clone> Rect<Length<Unit, T>> {
     /// Drop the units, preserving only the numeric value.
     pub fn to_untyped(&self) -> Rect<T> {
-        Rect(self.origin.to_untyped(), self.size.to_untyped())
+        Rect::new(self.origin.to_untyped(), self.size.to_untyped())
     }
 
     /// Tag a unitless value with units.
     pub fn from_untyped(r: &Rect<T>) -> TypedRect<Unit, T> {
-        Rect(Point2D::from_untyped(&r.origin), Size2D::from_untyped(&r.size))
+        Rect::new(Point2D::from_untyped(&r.origin), Size2D::from_untyped(&r.size))
     }
 }
 
@@ -147,7 +149,7 @@ impl<Unit, T0: NumCast + Clone, T1: NumCast + Clone> Rect<Length<Unit, T0>> {
     /// Cast from one numeric representation to another, preserving the units.
     pub fn cast(&self) -> Option<Rect<Length<Unit, T1>>> {
         match (self.origin.cast(), self.size.cast()) {
-            (Some(origin), Some(size)) => Some(Rect(origin, size)),
+            (Some(origin), Some(size)) => Some(Rect::new(origin, size)),
             _ => None
         }
     }
@@ -175,8 +177,8 @@ fn test_min_max() {
 
 #[test]
 fn test_translate() {
-    let p = Rect(Point2D(0, 0), Size2D(50, 40));
-    let pp = p.translate(&Point2D(10,15));
+    let p = Rect::new(Point2D::new(0, 0), Size2D::new(50, 40));
+    let pp = p.translate(&Point2D::new(10,15));
 
     assert!(pp.size.width == 50);
     assert!(pp.size.height == 40);
@@ -184,8 +186,8 @@ fn test_translate() {
     assert!(pp.origin.y == 15);
 
 
-    let r = Rect(Point2D(-10, -5), Size2D(50, 40));
-    let rr = r.translate(&Point2D(0,-10));
+    let r = Rect::new(Point2D::new(-10, -5), Size2D::new(50, 40));
+    let rr = r.translate(&Point2D::new(0,-10));
 
     assert!(rr.size.width == 50);
     assert!(rr.size.height == 40);
@@ -195,42 +197,42 @@ fn test_translate() {
 
 #[test]
 fn test_union() {
-    let p = Rect(Point2D(0,0), Size2D(50, 40));
-    let q = Rect(Point2D(20,20), Size2D(5, 5));
-    let r = Rect(Point2D(-15, -30), Size2D(200, 15));
-    let s = Rect(Point2D(20, -15), Size2D(250, 200));
+    let p = Rect::new(Point2D::new(0,0), Size2D::new(50, 40));
+    let q = Rect::new(Point2D::new(20,20), Size2D::new(5, 5));
+    let r = Rect::new(Point2D::new(-15, -30), Size2D::new(200, 15));
+    let s = Rect::new(Point2D::new(20, -15), Size2D::new(250, 200));
 
     let pq = p.union(&q);
-    assert!(pq.origin == Point2D(0, 0));
-    assert!(pq.size == Size2D(50, 40));
+    assert!(pq.origin == Point2D::new(0, 0));
+    assert!(pq.size == Size2D::new(50, 40));
 
     let pr = p.union(&r);
-    assert!(pr.origin == Point2D(-15, -30));
-    assert!(pr.size == Size2D(200, 70));
+    assert!(pr.origin == Point2D::new(-15, -30));
+    assert!(pr.size == Size2D::new(200, 70));
 
     let ps = p.union(&s);
-    assert!(ps.origin == Point2D(0, -15));
-    assert!(ps.size == Size2D(270, 200));
+    assert!(ps.origin == Point2D::new(0, -15));
+    assert!(ps.size == Size2D::new(270, 200));
 
 }
 
 #[test]
 fn test_intersection() {
-    let p = Rect(Point2D(0, 0), Size2D(10, 20));
-    let q = Rect(Point2D(5, 15), Size2D(10, 10));
-    let r = Rect(Point2D(-5, -5), Size2D(8, 8));
+    let p = Rect::new(Point2D::new(0, 0), Size2D::new(10, 20));
+    let q = Rect::new(Point2D::new(5, 15), Size2D::new(10, 10));
+    let r = Rect::new(Point2D::new(-5, -5), Size2D::new(8, 8));
 
     let pq = p.intersection(&q);
     assert!(pq.is_some());
     let pq = pq.unwrap();
-    assert!(pq.origin == Point2D(5, 15));
-    assert!(pq.size == Size2D(5, 5));
+    assert!(pq.origin == Point2D::new(5, 15));
+    assert!(pq.size == Size2D::new(5, 5));
 
     let pr = p.intersection(&r);
     assert!(pr.is_some());
     let pr = pr.unwrap();
-    assert!(pr.origin == Point2D(0, 0));
-    assert!(pr.size == Size2D(3, 3));
+    assert!(pr.origin == Point2D::new(0, 0));
+    assert!(pr.size == Size2D::new(3, 3));
 
     let qr = q.intersection(&r);
     assert!(qr.is_none());
@@ -238,31 +240,31 @@ fn test_intersection() {
 
 #[test]
 fn test_contains() {
-    let r = Rect(Point2D(-20, 15), Size2D(100, 200));
+    let r = Rect::new(Point2D::new(-20, 15), Size2D::new(100, 200));
 
-    assert!(r.contains(&Point2D(0, 50)));
-    assert!(r.contains(&Point2D(-10, 200)));
+    assert!(r.contains(&Point2D::new(0, 50)));
+    assert!(r.contains(&Point2D::new(-10, 200)));
 
     // The `contains` method is inclusive of the top/left edges, but not the
     // bottom/right edges.
-    assert!(r.contains(&Point2D(-20, 15)));
-    assert!(!r.contains(&Point2D(80, 15)));
-    assert!(!r.contains(&Point2D(80, 215)));
-    assert!(!r.contains(&Point2D(-20, 215)));
+    assert!(r.contains(&Point2D::new(-20, 15)));
+    assert!(!r.contains(&Point2D::new(80, 15)));
+    assert!(!r.contains(&Point2D::new(80, 215)));
+    assert!(!r.contains(&Point2D::new(-20, 215)));
 
     // Points beyond the top-left corner.
-    assert!(!r.contains(&Point2D(-25, 15)));
-    assert!(!r.contains(&Point2D(-15, 10)));
+    assert!(!r.contains(&Point2D::new(-25, 15)));
+    assert!(!r.contains(&Point2D::new(-15, 10)));
 
     // Points beyond the top-right corner.
-    assert!(!r.contains(&Point2D(85, 20)));
-    assert!(!r.contains(&Point2D(75, 10)));
+    assert!(!r.contains(&Point2D::new(85, 20)));
+    assert!(!r.contains(&Point2D::new(75, 10)));
 
     // Points beyond the bottom-right corner.
-    assert!(!r.contains(&Point2D(85, 210)));
-    assert!(!r.contains(&Point2D(75, 220)));
+    assert!(!r.contains(&Point2D::new(85, 210)));
+    assert!(!r.contains(&Point2D::new(75, 220)));
 
     // Points beyond the bottom-left corner.
-    assert!(!r.contains(&Point2D(-25, 210)));
-    assert!(!r.contains(&Point2D(-15, 220)));
+    assert!(!r.contains(&Point2D::new(-25, 210)));
+    assert!(!r.contains(&Point2D::new(-15, 220)));
 }

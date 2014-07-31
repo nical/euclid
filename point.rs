@@ -18,6 +18,12 @@ pub struct Point2D<T> {
     pub y: T
 }
 
+impl<T: Clone> Point2D<T> {
+    pub fn new(x: T, y: T) -> Point2D<T> {
+        Point2D {x: x, y: y}
+    }
+}
+
 impl<T: Zero + Clone> Zero for Point2D<T> {
     fn zero() -> Point2D<T> {
         Point2D { x: Zero::zero(), y: Zero::zero() }
@@ -34,34 +40,30 @@ impl<T: fmt::Show> fmt::Show for Point2D<T> {
     }
 }
 
-pub fn Point2D<T:Clone>(x: T, y: T) -> Point2D<T> {
-    Point2D {x: x, y: y}
-}
-
 
 impl<T:Clone + Add<T,T>> Add<Point2D<T>, Point2D<T>> for Point2D<T> {
     fn add(&self, other: &Point2D<T>) -> Point2D<T> {
-        Point2D(self.x + other.x, self.y + other.y)
+        Point2D::new(self.x + other.x, self.y + other.y)
     }
 }
 
 impl<T:Clone + Sub<T,T>> Sub<Point2D<T>, Point2D<T>> for Point2D<T> {
     fn sub(&self, other: &Point2D<T>) -> Point2D<T> {
-        Point2D(self.x - other.x, self.y - other.y)
+        Point2D::new(self.x - other.x, self.y - other.y)
     }
 }
 
 impl<Scale, T0: Mul<Scale, T1>, T1: Clone> Mul<Scale, Point2D<T1>> for Point2D<T0> {
     #[inline]
     fn mul(&self, scale: &Scale) -> Point2D<T1> {
-        Point2D(self.x * *scale, self.y * *scale)
+        Point2D::new(self.x * *scale, self.y * *scale)
     }
 }
 
 impl<Scale, T0: Div<Scale, T1>, T1: Clone> Div<Scale, Point2D<T1>> for Point2D<T0> {
     #[inline]
     fn div(&self, scale: &Scale) -> Point2D<T1> {
-        Point2D(self.x / *scale, self.y / *scale)
+        Point2D::new(self.x / *scale, self.y / *scale)
     }
 }
 
@@ -70,18 +72,18 @@ impl<Scale, T0: Div<Scale, T1>, T1: Clone> Div<Scale, Point2D<T1>> for Point2D<T
 pub type TypedPoint2D<Unit, T> = Point2D<Length<Unit, T>>;
 
 pub fn TypedPoint2D<Unit, T: Clone>(x: T, y: T) -> TypedPoint2D<Unit, T> {
-    Point2D(Length(x), Length(y))
+    Point2D::new(Length(x), Length(y))
 }
 
 impl<Unit, T: Clone> Point2D<Length<Unit, T>> {
     /// Drop the units, preserving only the numeric value.
     pub fn to_untyped(&self) -> Point2D<T> {
-        Point2D(self.x.get(), self.y.get())
+        Point2D::new(self.x.get(), self.y.get())
     }
 
     /// Tag a unitless value with units.
     pub fn from_untyped(p: &Point2D<T>) -> TypedPoint2D<Unit, T> {
-        Point2D(Length(p.x.clone()), Length(p.y.clone()))
+        Point2D::new(Length(p.x.clone()), Length(p.y.clone()))
     }
 }
 
@@ -89,7 +91,7 @@ impl<Unit, T0: NumCast + Clone, T1: NumCast + Clone> Point2D<Length<Unit, T0>> {
     /// Cast from one numeric representation to another, preserving the units.
     pub fn cast(&self) -> Option<Point2D<Length<Unit, T1>>> {
         match (self.x.cast(), self.y.cast()) {
-            (Some(x), Some(y)) => Some(Point2D(x, y)),
+            (Some(x), Some(y)) => Some(Point2D::new(x, y)),
             _ => None
         }
     }
