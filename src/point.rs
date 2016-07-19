@@ -7,147 +7,196 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use length::Length;
+use length::{ Length, Untyped };
+use scale_factor::ScaleFactor;
 use size::Size2D;
 use num::Zero;
 
 use num_traits::{Float, NumCast};
 use std::fmt;
 use std::ops::{Add, Neg, Mul, Sub, Div};
+use std::marker::PhantomData;
+use std::cmp::{ PartialEq, Eq };
 
-define_matrix! {
+define_vector! {
     #[derive(RustcDecodable, RustcEncodable)]
-    pub struct Point2D<T> {
+    #[cfg_attr(feature = "plugins", derive(HeapSizeOf, Deserialize, Serialize))]
+    pub struct Point2D<T, U> {
         pub x: T,
         pub y: T,
+        _unit: PhantomData<U>,
     }
 }
 
-impl<T: Zero> Point2D<T> {
-    pub fn zero() -> Point2D<T> {
-        Point2D { x: Zero::zero(), y: Zero::zero() }
+impl<T: Copy, U> Copy for Point2D<T, U> {}
+
+impl<T: Clone, U> Clone for Point2D<T, U> {
+    fn clone(&self) -> Point2D<T, U> {
+        Point2D::new(self.x.clone(), self.y.clone())
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for Point2D<T> {
+impl<T: PartialEq, U> PartialEq<Point2D<T, U>> for Point2D<T, U> {
+    fn eq(&self, other: &Point2D<T, U>) -> bool {
+        self.x.eq(&other.x) && self.y.eq(&other.y)
+    }
+}
+
+impl<T: Eq, U> Eq for Point2D<T, U> {}
+
+impl<T: Zero, U> Point2D<T, U> {
+    pub fn zero() -> Point2D<T, U> {
+        Point2D::new(Zero::zero(), Zero::zero())
+    }
+}
+
+impl<T: fmt::Debug, U> fmt::Debug for Point2D<T, U> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({:?},{:?})", self.x, self.y)
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Point2D<T> {
+impl<T: fmt::Display, U> fmt::Display for Point2D<T, U> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(formatter, "({},{})", self.x, self.y)
     }
 }
 
-impl<T> Point2D<T> {
-    pub fn new(x: T, y: T) -> Point2D<T> {
-        Point2D {x: x, y: y}
+impl<T, U> Point2D<T, U> {
+    pub fn new(x: T, y: T) -> Point2D<T, U> {
+        Point2D { x: x, y: y, _unit: PhantomData }
     }
+}
+
+impl<T: Clone, U> Point2D<T, U> {
+    pub fn from_typed(x: Length<T, U>, y: Length<T, U>) -> Point2D<T, U> {
+        Point2D::new(x.get(), y.get())
+    }
+}
+
+impl<T: Clone, U> Point2D<T, U> {
+    pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x.clone()) }
+    pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y.clone()) }
 }
 
 impl<T: Mul<T, Output=T> +
         Add<T, Output=T> +
         Sub<T, Output=T> +
-        Copy> Point2D<T> {
+        Copy, U> Point2D<T, U> {
     #[inline]
-    pub fn dot(self, other: Point2D<T>) -> T {
+    pub fn dot(self, other: Point2D<T, U>) -> T {
         self.x * other.x +
         self.y * other.y
     }
 
     #[inline]
-    pub fn cross(self, other: Point2D<T>) -> T {
+    pub fn cross(self, other: Point2D<T, U>) -> T {
         self.x * other.y - self.y * other.x
     }
 }
 
-impl<T:Clone + Add<T, Output=T>> Add for Point2D<T> {
-    type Output = Point2D<T>;
-    fn add(self, other: Point2D<T>) -> Point2D<T> {
+impl<T:Clone + Add<T, Output=T>, U> Add for Point2D<T, U> {
+    type Output = Point2D<T, U>;
+    fn add(self, other: Point2D<T, U>) -> Point2D<T, U> {
         Point2D::new(self.x + other.x, self.y + other.y)
     }
 }
 
-impl<T:Clone + Add<T, Output=T>> Add<Size2D<T>> for Point2D<T> {
-    type Output = Point2D<T>;
-    fn add(self, other: Size2D<T>) -> Point2D<T> {
+// TODO: Size<T, U>
+impl<T:Clone + Add<T, Output=T>, U> Add<Size2D<T, U>> for Point2D<T, U> {
+    type Output = Point2D<T, U>;
+    fn add(self, other: Size2D<T, U>) -> Point2D<T, U> {
         Point2D::new(self.x + other.width, self.y + other.height)
     }
 }
 
-impl<T: Copy + Add<T, Output=T>> Point2D<T> {
-    pub fn add_size(&self, other: &Size2D<T>) -> Point2D<T> {
-        Point2D { x: self.x + other.width, y: self.y + other.height }
+impl<T: Copy + Add<T, Output=T>, U> Point2D<T, U> {
+    pub fn add_size(&self, other: &Size2D<T, U>) -> Point2D<T, U> {
+        Point2D::new(self.x + other.width, self.y + other.height)
     }
 }
 
-impl<T:Clone + Sub<T, Output=T>> Sub for Point2D<T> {
-    type Output = Point2D<T>;
-    fn sub(self, other: Point2D<T>) -> Point2D<T> {
+impl<T:Clone + Sub<T, Output=T>, U> Sub for Point2D<T, U> {
+    type Output = Point2D<T, U>;
+    fn sub(self, other: Point2D<T, U>) -> Point2D<T, U> {
         Point2D::new(self.x - other.x, self.y - other.y)
     }
 }
 
-impl <T:Clone + Neg<Output=T>> Neg for Point2D<T> {
-    type Output = Point2D<T>;
+impl <T:Clone + Neg<Output=T>, U> Neg for Point2D<T, U> {
+    type Output = Point2D<T, U>;
     #[inline]
-    fn neg(self) -> Point2D<T> {
+    fn neg(self) -> Point2D<T, U> {
         Point2D::new(-self.x, -self.y)
     }
 }
 
-impl<T: Float> Point2D<T> {
-    pub fn min(self, other: Point2D<T>) -> Point2D<T> {
+impl<T: Float, U> Point2D<T, U> {
+    pub fn min(self, other: Point2D<T, U>) -> Point2D<T, U> {
          Point2D::new(self.x.min(other.x), self.y.min(other.y))
     }
 
-    pub fn max(self, other: Point2D<T>) -> Point2D<T> {
+    pub fn max(self, other: Point2D<T, U>) -> Point2D<T, U> {
         Point2D::new(self.x.max(other.x), self.y.max(other.y))
     }
 }
 
-impl<Scale: Copy, T0: Mul<Scale, Output=T1>, T1: Clone> Mul<Scale> for Point2D<T0> {
-    type Output = Point2D<T1>;
+impl<T: Copy + Mul<T, Output=T>, U> Mul<T> for Point2D<T, U> {
+    type Output = Point2D<T, U>;
     #[inline]
-    fn mul(self, scale: Scale) -> Point2D<T1> {
+    fn mul(self, scale: T) -> Point2D<T, U> {
         Point2D::new(self.x * scale, self.y * scale)
     }
 }
 
-impl<Scale: Copy, T0: Div<Scale, Output=T1>, T1: Clone> Div<Scale> for Point2D<T0> {
-    type Output = Point2D<T1>;
+impl<T: Copy + Div<T, Output=T>, U> Div<T> for Point2D<T, U> {
+    type Output = Point2D<T, U>;
     #[inline]
-    fn div(self, scale: Scale) -> Point2D<T1> {
+    fn div(self, scale: T) -> Point2D<T, U> {
         Point2D::new(self.x / scale, self.y / scale)
+    }
+}
+
+impl<T: Copy + Mul<T, Output=T>, U1, U2> Mul<ScaleFactor<T, U1, U2>> for Point2D<T, U1> {
+    type Output = Point2D<T, U2>;
+    #[inline]
+    fn mul(self, scale: ScaleFactor<T, U1, U2>) -> Point2D<T, U2> {
+        Point2D::new(self.x * scale.get(), self.y * scale.get())
+    }
+}
+
+impl<T: Copy + Div<T, Output=T>, U1, U2> Div<ScaleFactor<T, U1, U2>> for Point2D<T, U2> {
+    type Output = Point2D<T, U1>;
+    #[inline]
+    fn div(self, scale: ScaleFactor<T, U1, U2>) -> Point2D<T, U1> {
+        Point2D::new(self.x / scale.get(), self.y / scale.get())
     }
 }
 
 // Convenient aliases for Point2D with typed units
 
-pub type TypedPoint2D<Unit, T> = Point2D<Length<Unit, T>>;
+pub type TypedPoint2D<U, T> = Point2D<T, U>;
 
-impl<Unit, T: Clone> TypedPoint2D<Unit, T> {
-    pub fn typed(x: T, y: T) -> TypedPoint2D<Unit, T> {
-        Point2D::new(Length::new(x), Length::new(y))
+impl<U, T:Clone> TypedPoint2D<U, T> {
+    pub fn typed(x: T, y: T) -> TypedPoint2D<U, T> {
+        Point2D::new(x, y)
     }
 
     /// Drop the units, preserving only the numeric value.
-    pub fn to_untyped(&self) -> Point2D<T> {
-        Point2D::new(self.x.get(), self.y.get())
+    pub fn to_untyped(&self) -> Point2D<T, Untyped> {
+        Point2D::new(self.x.clone(), self.y.clone())
     }
 
     /// Tag a unitless value with units.
-    pub fn from_untyped(p: &Point2D<T>) -> TypedPoint2D<Unit, T> {
-        Point2D::new(Length::new(p.x.clone()), Length::new(p.y.clone()))
+    pub fn from_untyped(p: &Point2D<T, Untyped>) -> Point2D<T, U> {
+        Point2D::new(p.x.clone(), p.y.clone())
     }
 }
 
-impl<Unit, T0: NumCast + Clone> Point2D<Length<Unit, T0>> {
+impl<T0: NumCast + Clone, U> Point2D<T0, U> {
     /// Cast from one numeric representation to another, preserving the units.
-    pub fn cast<T1: NumCast + Clone>(&self) -> Option<Point2D<Length<Unit, T1>>> {
-        match (self.x.cast(), self.y.cast()) {
+    pub fn cast<T1: NumCast + Clone>(&self) -> Option<Point2D<T1, U>> {
+        match (NumCast::from(self.x.clone()), NumCast::from(self.y.clone())) {
             (Some(x), Some(y)) => Some(Point2D::new(x, y)),
             _ => None
         }
@@ -155,154 +204,151 @@ impl<Unit, T0: NumCast + Clone> Point2D<Length<Unit, T0>> {
 }
 
 // Convenience functions for common casts
-impl<Unit, T: NumCast + Clone> Point2D<Length<Unit, T>> {
-    pub fn as_f32(&self) -> Point2D<Length<Unit, f32>> {
+impl<U, T: NumCast + Clone> Point2D<T, U> {
+    pub fn as_f32(&self) -> Point2D<f32, U> {
         self.cast().unwrap()
     }
 
-    pub fn as_uint(&self) -> Point2D<Length<Unit, usize>> {
+    pub fn as_uint(&self) -> Point2D<usize, U> {
         self.cast().unwrap()
     }
 }
 
-define_matrix! {
+define_vector! {
     #[derive(RustcDecodable, RustcEncodable)]
-    pub struct Point3D<T> {
+    pub struct Point3D<T, U> {
         pub x: T,
         pub y: T,
         pub z: T,
+        _unit: PhantomData<U>,
     }
 }
 
-impl<T: Zero> Point3D<T> {
+impl<T: Zero, U> Point3D<T, U> {
     #[inline]
-    pub fn zero() -> Point3D<T> {
-        Point3D { x: Zero::zero(), y: Zero::zero(), z: Zero::zero() }
+    pub fn zero() -> Point3D<T, U> {
+        Point3D::new(Zero::zero(), Zero::zero(), Zero::zero())
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for Point3D<T> {
+impl<T: fmt::Debug, U> fmt::Debug for Point3D<T, U> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({:?},{:?},{:?})", self.x, self.y, self.z)
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Point3D<T> {
+impl<T: fmt::Display, U> fmt::Display for Point3D<T, U> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(formatter, "({},{},{})", self.x, self.y, self.z)
     }
 }
 
-impl<T> Point3D<T> {
+impl<T, U> Point3D<T, U> {
     #[inline]
-    pub fn new(x: T, y: T, z: T) -> Point3D<T> {
-        Point3D {x: x, y: y, z: z}
+    pub fn new(x: T, y: T, z: T) -> Point3D<T, U> {
+        Point3D { x: x, y: y, z: z, _unit: PhantomData }
     }
 }
 
 impl<T: Mul<T, Output=T> +
         Add<T, Output=T> +
         Sub<T, Output=T> +
-        Copy> Point3D<T> {
+        Copy, U> Point3D<T, U> {
     #[inline]
-    pub fn dot(self, other: Point3D<T>) -> T {
+    pub fn dot(self, other: Point3D<T, U>) -> T {
         self.x * other.x +
         self.y * other.y +
         self.z * other.z
     }
 
     #[inline]
-    pub fn cross(self, other: Point3D<T>) -> Point3D<T> {
-        Point3D {
-            x: self.y * other.z - self.z * other.y,
-            y: self.z * other.x - self.x * other.z,
-            z: self.x * other.y - self.y * other.x,
-        }
+    pub fn cross(self, other: Point3D<T, U>) -> Point3D<T, U> {
+        Point3D::new(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
+        )
     }
 }
 
-impl<T:Clone + Add<T, Output=T>> Add for Point3D<T> {
-    type Output = Point3D<T>;
-    fn add(self, other: Point3D<T>) -> Point3D<T> {
+impl<T:Clone + Add<T, Output=T>, U> Add for Point3D<T, U> {
+    type Output = Point3D<T, U>;
+    fn add(self, other: Point3D<T, U>) -> Point3D<T, U> {
         Point3D::new(self.x + other.x,
                      self.y + other.y,
                      self.z + other.z)
     }
 }
 
-impl<T:Clone + Sub<T, Output=T>> Sub for Point3D<T> {
-    type Output = Point3D<T>;
-    fn sub(self, other: Point3D<T>) -> Point3D<T> {
+impl<T:Clone + Sub<T, Output=T>, U> Sub for Point3D<T, U> {
+    type Output = Point3D<T, U>;
+    fn sub(self, other: Point3D<T, U>) -> Point3D<T, U> {
         Point3D::new(self.x - other.x,
                      self.y - other.y,
                      self.z - other.z)
     }
 }
 
-impl <T:Clone + Neg<Output=T>> Neg for Point3D<T> {
-    type Output = Point3D<T>;
+impl <T:Clone + Neg<Output=T>, U> Neg for Point3D<T, U> {
+    type Output = Point3D<T, U>;
     #[inline]
-    fn neg(self) -> Point3D<T> {
+    fn neg(self) -> Point3D<T, U> {
         Point3D::new(-self.x, -self.y, -self.z)
     }
 }
 
-impl<T: Float> Point3D<T> {
-    pub fn min(self, other: Point3D<T>) -> Point3D<T> {
+impl<T: Float, U> Point3D<T, U> {
+    pub fn min(self, other: Point3D<T, U>) -> Point3D<T, U> {
          Point3D::new(self.x.min(other.x), self.y.min(other.y),
                       self.z.min(other.z))
     }
 
-    pub fn max(self, other: Point3D<T>) -> Point3D<T> {
+    pub fn max(self, other: Point3D<T, U>) -> Point3D<T, U> {
         Point3D::new(self.x.max(other.x), self.y.max(other.y),
                      self.z.max(other.z))
     }
 }
 
-define_matrix! {
+define_vector! {
     #[derive(RustcDecodable, RustcEncodable)]
-    pub struct Point4D<T> {
+    pub struct Point4D<T, U> {
         pub x: T,
         pub y: T,
         pub z: T,
         pub w: T,
+        _unit: PhantomData<U>,
     }
 }
 
-impl<T: Zero> Point4D<T> {
+impl<T: Zero, U> Point4D<T, U> {
     #[inline]
-    pub fn zero() -> Point4D<T> {
-        Point4D {
-            x: Zero::zero(),
-            y: Zero::zero(),
-            z: Zero::zero(),
-            w: Zero::zero()
-        }
+    pub fn zero() -> Point4D<T, U> {
+        Point4D::new(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero())
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for Point4D<T> {
+impl<T: fmt::Debug, U> fmt::Debug for Point4D<T, U> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({:?},{:?},{:?},{:?})", self.x, self.y, self.z, self.w)
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Point4D<T> {
+impl<T: fmt::Display, U> fmt::Display for Point4D<T, U> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(formatter, "({},{},{},{})", self.x, self.y, self.z, self.w)
     }
 }
 
-impl<T> Point4D<T> {
+impl<T, U> Point4D<T, U> {
     #[inline]
-    pub fn new(x: T, y: T, z: T, w: T) -> Point4D<T> {
-        Point4D {x: x, y: y, z: z, w: w}
+    pub fn new(x: T, y: T, z: T, w: T) -> Point4D<T, U> {
+        Point4D { x: x, y: y, z: z, w: w, _unit: PhantomData }
     }
 }
 
-impl<T:Clone + Add<T, Output=T>> Add for Point4D<T> {
-    type Output = Point4D<T>;
-    fn add(self, other: Point4D<T>) -> Point4D<T> {
+impl<T:Clone + Add<T, Output=T>, U> Add for Point4D<T, U> {
+    type Output = Point4D<T, U>;
+    fn add(self, other: Point4D<T, U>) -> Point4D<T, U> {
         Point4D::new(self.x + other.x,
                      self.y + other.y,
                      self.z + other.z,
@@ -310,9 +356,9 @@ impl<T:Clone + Add<T, Output=T>> Add for Point4D<T> {
     }
 }
 
-impl<T:Clone + Sub<T, Output=T>> Sub for Point4D<T> {
-    type Output = Point4D<T>;
-    fn sub(self, other: Point4D<T>) -> Point4D<T> {
+impl<T:Clone + Sub<T, Output=T>, U> Sub for Point4D<T, U> {
+    type Output = Point4D<T, U>;
+    fn sub(self, other: Point4D<T, U>) -> Point4D<T, U> {
         Point4D::new(self.x - other.x,
                      self.y - other.y,
                      self.z - other.z,
@@ -320,21 +366,21 @@ impl<T:Clone + Sub<T, Output=T>> Sub for Point4D<T> {
     }
 }
 
-impl <T:Clone + Neg<Output=T>> Neg for Point4D<T> {
-    type Output = Point4D<T>;
+impl <T:Clone + Neg<Output=T>, U> Neg for Point4D<T, U> {
+    type Output = Point4D<T, U>;
     #[inline]
-    fn neg(self) -> Point4D<T> {
+    fn neg(self) -> Point4D<T, U> {
         Point4D::new(-self.x, -self.y, -self.z, -self.w)
     }
 }
 
-impl<T: Float> Point4D<T> {
-    pub fn min(self, other: Point4D<T>) -> Point4D<T> {
+impl<T: Float, U> Point4D<T, U> {
+    pub fn min(self, other: Point4D<T, U>) -> Point4D<T, U> {
          Point4D::new(self.x.min(other.x), self.y.min(other.y),
                       self.z.min(other.z), self.w.min(other.w))
     }
 
-    pub fn max(self, other: Point4D<T>) -> Point4D<T> {
+    pub fn max(self, other: Point4D<T, U>) -> Point4D<T, U> {
         Point4D::new(self.x.max(other.x), self.y.max(other.y),
                      self.z.max(other.z), self.w.max(other.w))
     }
@@ -416,7 +462,7 @@ mod typedpoint2d {
     #[test]
     pub fn test_scalar_mul() {
         let p1 = Point2DMm::typed(1.0, 2.0);
-        let cm_per_mm: ScaleFactor<Mm, Cm, f32> = ScaleFactor::new(0.1);
+        let cm_per_mm: ScaleFactor<f32, Mm, Cm> = ScaleFactor::new(0.1);
 
         let result = p1 * cm_per_mm;
 

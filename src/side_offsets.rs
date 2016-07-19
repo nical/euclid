@@ -17,34 +17,36 @@ use std::ops::Add;
 
 /// A group of side offsets, which correspond to top/left/bottom/right for borders, padding,
 /// and margins in CSS.
-define_matrix! {
+define_vector! {
     #[derive(Debug)]
-    pub struct SideOffsets2D<T> {
+    pub struct SideOffsets2D<T, U> {
         pub top: T,
         pub right: T,
         pub bottom: T,
         pub left: T,
+        _unit: PhantomData<U>,
     }
 }
 
-impl<T> SideOffsets2D<T> {
-    pub fn new(top: T, right: T, bottom: T, left: T) -> SideOffsets2D<T> {
+impl<T, U> SideOffsets2D<T, U> {
+    pub fn new(top: T, right: T, bottom: T, left: T) -> SideOffsets2D<T, U> {
         SideOffsets2D {
             top: top,
             right: right,
             bottom: bottom,
             left: left,
+            _unit: PhantomData,
         }
     }
 }
 
-impl<T:Clone> SideOffsets2D<T> {
-    pub fn new_all_same(all: T) -> SideOffsets2D<T> {
+impl<T:Clone> SideOffsets2D<T, U> {
+    pub fn new_all_same(all: T) -> SideOffsets2D<T, U> {
         SideOffsets2D::new(all.clone(), all.clone(), all.clone(), all.clone())
     }
 }
 
-impl<T> SideOffsets2D<T> where T: Add<T, Output=T> + Copy {
+impl<T, U> SideOffsets2D<T, U> where T: Add<T, Output=T> + Copy {
     pub fn horizontal(&self) -> T {
         self.left + self.right
     }
@@ -54,26 +56,26 @@ impl<T> SideOffsets2D<T> where T: Add<T, Output=T> + Copy {
     }
 }
 
-impl<T: Add<T, Output=T>> Add for SideOffsets2D<T> {
-    type Output = SideOffsets2D<T>;
-    fn add(self, other: SideOffsets2D<T>) -> SideOffsets2D<T> {
-        SideOffsets2D {
-            top: self.top + other.top,
-            right: self.right + other.right,
-            bottom: self.bottom + other.bottom,
-            left: self.left + other.left,
-        }
+impl<T: Add<T, Output=T>, U> Add for SideOffsets2D<T, U> {
+    type Output = SideOffsets2D<T, U>;
+    fn add(self, other: SideOffsets2D<T, U>) -> SideOffsets2D<T, U> {
+        SideOffsets2D::new(
+            self.top + other.top,
+            self.right + other.right,
+            self.bottom + other.bottom,
+            self.left + other.left,
+        )
     }
 }
 
-impl<T: Zero> SideOffsets2D<T> {
-    pub fn zero() -> SideOffsets2D<T> {
-        SideOffsets2D {
-            top: Zero::zero(),
-            right: Zero::zero(),
-            bottom: Zero::zero(),
-            left: Zero::zero(),
-        }
+impl<T: Zero, U> SideOffsets2D<T, U> {
+    pub fn zero() -> SideOffsets2D<T, U> {
+        SideOffsets2D::new(
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+        )
     }
 }
 
