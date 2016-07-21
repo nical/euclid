@@ -33,14 +33,13 @@ macro_rules! deserialize {
         $T:ty
     ) => ({
         let values = try!(<[$T; $total]>::deserialize($deserializer));
-        Ok($name { $($field: values[$index].clone(),)+ })
+        Ok($name { $($field: values[$index].clone(),)+ _unit: PhantomData })
     })
 }
 
 macro_rules! define_matrix {
-    ($(#[$attr:meta])* pub struct $name:ident<T, Src, Dst> { $(pub $field:ident: T,)+ _units: PhantomData<(Src, Dst)>, }) => (
+    ($(#[$attr:meta])* pub struct $name:ident<T, Src, Dst> { $(pub $field:ident: T,)+ }) => (
         $(#[$attr])*
-        #[derive(Clone, Copy, Eq, Hash, PartialEq)]
         pub struct $name<T, Src, Dst> {
             $(pub $field: T,)+
             _unit: PhantomData<(Src, Dst)>
@@ -71,15 +70,14 @@ macro_rules! define_matrix {
 }
 
 macro_rules! define_vector {
-    ($(#[$attr:meta])* pub struct $name:ident<T, U> { $(pub $field:ident: T,)+ _unit: PhantomData<U>, }) => (
+    ($(#[$attr:meta])* pub struct $name:ident<T, U> { $(pub $field:ident: T,)+ }) => (
         $(#[$attr])*
-        #[derive(Clone, Copy, Eq, Hash, PartialEq)]
         pub struct $name<T, U> {
             $(pub $field: T,)+
             _unit: PhantomData<U>,
         }
 
-        impl<T: ::heapsize::HeapSizeOf> ::heapsize::HeapSizeOf for $name<T, U> {
+        impl<T: ::heapsize::HeapSizeOf, U> ::heapsize::HeapSizeOf for $name<T, U> {
             fn heap_size_of_children(&self) -> usize {
                 $(self.$field.heap_size_of_children() +)+ 0
             }

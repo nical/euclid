@@ -13,24 +13,27 @@
 #[cfg(feature = "unstable")]
 use heapsize::HeapSizeOf;
 use num::Zero;
+use length::{ Length, Untyped };
 use std::ops::Add;
+use std::marker::PhantomData;
 
 /// A group of side offsets, which correspond to top/left/bottom/right for borders, padding,
 /// and margins in CSS.
 define_vector! {
     #[derive(Debug)]
-    pub struct SideOffsets2D<T, U> {
+    pub struct TypedSideOffsets2D<T, U> {
         pub top: T,
         pub right: T,
         pub bottom: T,
         pub left: T,
-        _unit: PhantomData<U>,
     }
 }
 
-impl<T, U> SideOffsets2D<T, U> {
-    pub fn new(top: T, right: T, bottom: T, left: T) -> SideOffsets2D<T, U> {
-        SideOffsets2D {
+pub type SideOffsets2D<T> = TypedSideOffsets2D<T, Untyped>;
+
+impl<T, U> TypedSideOffsets2D<T, U> {
+    pub fn new(top: T, right: T, bottom: T, left: T) -> TypedSideOffsets2D<T, U> {
+        TypedSideOffsets2D {
             top: top,
             right: right,
             bottom: bottom,
@@ -40,13 +43,20 @@ impl<T, U> SideOffsets2D<T, U> {
     }
 }
 
-impl<T:Clone> SideOffsets2D<T, U> {
-    pub fn new_all_same(all: T) -> SideOffsets2D<T, U> {
-        SideOffsets2D::new(all.clone(), all.clone(), all.clone(), all.clone())
+impl<T: Clone, U> TypedSideOffsets2D<T, U> {
+    pub fn get_top(&self) -> Length<T, U> { Length::new(self.top.clone()) }
+    pub fn get_right(&self) -> Length<T, U> { Length::new(self.right.clone()) }
+    pub fn get_bottom(&self) -> Length<T, U> { Length::new(self.bottom.clone()) }
+    pub fn get_left(&self) -> Length<T, U> { Length::new(self.left.clone()) }
+}
+
+impl<T:Clone, U> TypedSideOffsets2D<T, U> {
+    pub fn new_all_same(all: T) -> TypedSideOffsets2D<T, U> {
+        TypedSideOffsets2D::new(all.clone(), all.clone(), all.clone(), all.clone())
     }
 }
 
-impl<T, U> SideOffsets2D<T, U> where T: Add<T, Output=T> + Copy {
+impl<T, U> TypedSideOffsets2D<T, U> where T: Add<T, Output=T> + Copy {
     pub fn horizontal(&self) -> T {
         self.left + self.right
     }
@@ -56,10 +66,10 @@ impl<T, U> SideOffsets2D<T, U> where T: Add<T, Output=T> + Copy {
     }
 }
 
-impl<T: Add<T, Output=T>, U> Add for SideOffsets2D<T, U> {
-    type Output = SideOffsets2D<T, U>;
-    fn add(self, other: SideOffsets2D<T, U>) -> SideOffsets2D<T, U> {
-        SideOffsets2D::new(
+impl<T: Add<T, Output=T>, U> Add for TypedSideOffsets2D<T, U> {
+    type Output = TypedSideOffsets2D<T, U>;
+    fn add(self, other: TypedSideOffsets2D<T, U>) -> TypedSideOffsets2D<T, U> {
+        TypedSideOffsets2D::new(
             self.top + other.top,
             self.right + other.right,
             self.bottom + other.bottom,
@@ -68,9 +78,9 @@ impl<T: Add<T, Output=T>, U> Add for SideOffsets2D<T, U> {
     }
 }
 
-impl<T: Zero, U> SideOffsets2D<T, U> {
-    pub fn zero() -> SideOffsets2D<T, U> {
-        SideOffsets2D::new(
+impl<T: Zero, U> TypedSideOffsets2D<T, U> {
+    pub fn zero() -> TypedSideOffsets2D<T, U> {
+        TypedSideOffsets2D::new(
             Zero::zero(),
             Zero::zero(),
             Zero::zero(),
@@ -79,7 +89,7 @@ impl<T: Zero, U> SideOffsets2D<T, U> {
     }
 }
 
-/// A SIMD enabled version of SideOffsets2D specialized for i32.
+/// A SIMD enabled version of TypedSideOffsets2D specialized for i32.
 #[cfg(feature = "unstable")]
 #[derive(Clone, Copy, PartialEq)]
 #[repr(simd)]

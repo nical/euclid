@@ -18,13 +18,9 @@ use std::cmp::Ordering;
 use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::ops::{AddAssign, SubAssign};
 use std::marker::PhantomData;
+use std::fmt;
 
-
-pub trait Unit : Copy + Clone + PartialEq + Eq {}
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Untyped;
-
-
 
 /// A one-dimensional distance, with value represented by `T` and unit of measurement `Unit`.
 ///
@@ -39,11 +35,11 @@ pub struct Untyped;
 /// another. See the `ScaleFactor` docs for an example.
 // Uncomment the derive, and remove the macro call, once heapsize gets
 // PhantomData<T> support.
-#[derive(Copy, RustcDecodable, RustcEncodable, Debug)]
+#[derive(RustcDecodable, RustcEncodable)]
 #[cfg_attr(feature = "plugins", derive(HeapSizeOf))]
 pub struct Length<T, Unit>(pub T, PhantomData<Unit>);
 
-impl<Unit, T: HeapSizeOf> HeapSizeOf for Length<Unit, T> {
+impl<Unit, T: HeapSizeOf> HeapSizeOf for Length<T, Unit> {
     fn heap_size_of_children(&self) -> usize {
         self.0.heap_size_of_children()
     }
@@ -69,9 +65,23 @@ impl<T, Unit> Length<T, Unit> {
     }
 }
 
+impl<T: Copy, Unit> Copy for Length<T, Unit> {}
+
 impl<Unit, T: Clone> Length<T, Unit> {
     pub fn get(&self) -> T {
         self.0.clone()
+    }
+}
+
+impl<T: fmt::Debug + Clone, U> fmt::Debug for Length<T, U> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.get().fmt(f)
+    }
+}
+
+impl<T: fmt::Display + Clone, U> fmt::Display for Length<T, U> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.get().fmt(f)
     }
 }
 
@@ -193,7 +203,7 @@ mod tests {
     fn test_length() {
         let mm_per_inch: ScaleFactor<f32, Inch, Mm> = ScaleFactor::new(25.4);
 
-        let one_foot: Length<Inch, f32> = Length::new(12.0);
+        let one_foot: Length<f32, Inch> = Length::new(12.0);
         let two_feet = one_foot.clone() + one_foot.clone();
         let zero_feet = one_foot.clone() - one_foot.clone();
 
@@ -214,15 +224,15 @@ mod tests {
         assert!(!(two_feet >  two_feet));
         assert!(!(two_feet <  two_feet));
 
-        let one_foot_in_mm: Length<Mm, f32> = one_foot * mm_per_inch;
+        let one_foot_in_mm: Length<f32, Mm> = one_foot * mm_per_inch;
 
         assert_eq!(one_foot_in_mm, Length::new(304.8));
         assert_eq!(one_foot_in_mm / one_foot, mm_per_inch);
 
-        let back_to_inches: Length<Inch, f32> = one_foot_in_mm / mm_per_inch;
+        let back_to_inches: Length<f32, Inch> = one_foot_in_mm / mm_per_inch;
         assert_eq!(one_foot, back_to_inches);
 
-        let int_foot: Length<Inch, isize> = one_foot.cast().unwrap();
+        let int_foot: Length<isize, Inch> = one_foot.cast().unwrap();
         assert_eq!(int_foot.get(), 12);
 
         let negative_one_foot = -one_foot;
@@ -231,15 +241,15 @@ mod tests {
         let negative_two_feet = -two_feet;
         assert_eq!(negative_two_feet.get(), -24.0);
 
-        let zero_feet: Length<Inch, f32> = Length::new(0.0);
+        let zero_feet: Length<f32, Inch> = Length::new(0.0);
         let negative_zero_feet = -zero_feet;
         assert_eq!(negative_zero_feet.get(), 0.0);
     }
 
     #[test]
     fn test_addassign() {
-        let one_cm: Length<Mm, f32> = Length::new(10.0);
-        let mut measurement: Length<Mm, f32> = Length::new(5.0);
+        let one_cm: Length<f32, Mm> = Length::new(10.0);
+        let mut measurement: Length<f32, Mm> = Length::new(5.0);
 
         measurement += one_cm;
 
@@ -248,8 +258,8 @@ mod tests {
 
     #[test]
     fn test_subassign() {
-        let one_cm: Length<Mm, f32> = Length::new(10.0);
-        let mut measurement: Length<Mm, f32> = Length::new(5.0);
+        let one_cm: Length<f32, Mm> = Length::new(10.0);
+        let mut measurement: Length<f32, Mm> = Length::new(5.0);
 
         measurement -= one_cm;
 

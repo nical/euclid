@@ -9,23 +9,42 @@
 
 use approxeq::ApproxEq;
 use trig::Trig;
-use point::{Point2D, Point4D};
+use point::{TypedPoint2D, TypedPoint4D};
+use matrix2d::TypedMatrix2D;
+use length::Untyped;
 use num::{One, Zero};
 use std::ops::{Add, Mul, Sub, Div, Neg};
 use std::marker::PhantomData;
+use std::fmt;
 
 define_matrix! {
-    #[derive(Debug)]
     pub struct TypedMatrix4D<T, Src, Dst> {
         pub m11: T, pub m12: T, pub m13: T, pub m14: T,
         pub m21: T, pub m22: T, pub m23: T, pub m24: T,
         pub m31: T, pub m32: T, pub m33: T, pub m34: T,
         pub m41: T, pub m42: T, pub m43: T, pub m44: T,
-        _units: PhantomData<(Src, Dst)>,
     }
 }
 
-pub type Matrix4D<T> = TypedMatrix4D<T, Src, Dst>;
+pub type Matrix4D<T> = TypedMatrix4D<T, Untyped, Untyped>;
+
+impl<T, Src, Dst> TypedMatrix4D<T, Src, Dst> {
+    #[inline]
+    pub fn new(
+            m11: T, m12: T, m13: T, m14: T,
+            m21: T, m22: T, m23: T, m24: T,
+            m31: T, m32: T, m33: T, m34: T,
+            m41: T, m42: T, m43: T, m44: T)
+         -> TypedMatrix4D<T, Src, Dst> {
+        TypedMatrix4D {
+            m11: m11, m12: m12, m13: m13, m14: m14,
+            m21: m21, m22: m22, m23: m23, m24: m24,
+            m31: m31, m32: m32, m33: m33, m34: m34,
+            m41: m41, m42: m42, m43: m43, m44: m44,
+            _unit: PhantomData,
+        }
+    }
+}
 
 impl <T:Add<T, Output=T> +
        ApproxEq<T> +
@@ -39,22 +58,6 @@ impl <T:Add<T, Output=T> +
        Sub<T, Output=T> +
        Trig +
        Zero, Src, Dst> TypedMatrix4D<T, Src, Dst> {
-
-    #[inline]
-    pub fn new(
-            m11: T, m12: T, m13: T, m14: T,
-            m21: T, m22: T, m23: T, m24: T,
-            m31: T, m32: T, m33: T, m34: T,
-            m41: T, m42: T, m43: T, m44: T)
-         -> TypedMatrix4D<T, Src, Dst> {
-        TypedMatrix4D {
-            m11: m11, m12: m12, m13: m13, m14: m14,
-            m21: m21, m22: m22, m23: m23, m24: m24,
-            m31: m31, m32: m32, m33: m33, m34: m34,
-            m41: m41, m42: m42, m43: m43, m44: m44,
-            _units: PhantomData,
-        }
-    }
 
     #[inline]
     pub fn new_2d(m11: T, m12: T, m21: T, m22: T, m41: T, m42: T) -> TypedMatrix4D<T, Src, Dst> {
@@ -120,6 +123,13 @@ impl <T:Add<T, Output=T> +
         self.m33 == _1 && self.m44 == _1
     }
 
+    pub fn to_2d(&self) -> TypedMatrix2D<T, Src, Dst> {
+        TypedMatrix2D::new(
+            self.m11, self.m12,
+            self.m21, self.m22,
+            self.m41, self.m42
+        )
+    }
 
     pub fn approx_eq(&self, other: &TypedMatrix4D<T, Src, Dst>) -> bool {
         self.m11.approx_eq(&other.m11) && self.m12.approx_eq(&other.m12) &&
@@ -132,7 +142,7 @@ impl <T:Add<T, Output=T> +
         self.m43.approx_eq(&other.m43) && self.m44.approx_eq(&other.m44)
     }
 
-    pub fn mul(&self, m: &TypedMatrix4D<T, Src, Dst>) -> TypedMatrix4D<T, Src, Dst> {
+    pub fn mul<Dst2>(&self, m: &TypedMatrix4D<T, Dst, Dst2>) -> TypedMatrix4D<T, Src, Dst2> {
         TypedMatrix4D::new(
             m.m11*self.m11 + m.m12*self.m21 + m.m13*self.m31 + m.m14*self.m41,
             m.m11*self.m12 + m.m12*self.m22 + m.m13*self.m32 + m.m14*self.m42,
@@ -260,69 +270,70 @@ impl <T:Add<T, Output=T> +
     }
 
     pub fn mul_s(&self, x: T) -> TypedMatrix4D<T, Src, Dst> {
-        TypedMatrix4D::new(self.m11 * x, self.m12 * x, self.m13 * x, self.m14 * x,
-                     self.m21 * x, self.m22 * x, self.m23 * x, self.m24 * x,
-                     self.m31 * x, self.m32 * x, self.m33 * x, self.m34 * x,
-                     self.m41 * x, self.m42 * x, self.m43 * x, self.m44 * x)
+        TypedMatrix4D::new(
+            self.m11 * x, self.m12 * x, self.m13 * x, self.m14 * x,
+            self.m21 * x, self.m22 * x, self.m23 * x, self.m24 * x,
+            self.m31 * x, self.m32 * x, self.m33 * x, self.m34 * x,
+            self.m41 * x, self.m42 * x, self.m43 * x, self.m44 * x
+        )
     }
 
     pub fn scale(&self, x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
-        TypedMatrix4D::new(self.m11 * x, self.m12,     self.m13,     self.m14,
-                     self.m21    , self.m22 * y, self.m23,     self.m24,
-                     self.m31    , self.m32,     self.m33 * z, self.m34,
-                     self.m41    , self.m42,     self.m43,     self.m44)
+        TypedMatrix4D::new(
+            self.m11 * x, self.m12,     self.m13,     self.m14,
+            self.m21    , self.m22 * y, self.m23,     self.m24,
+            self.m31    , self.m32,     self.m33 * z, self.m34,
+            self.m41    , self.m42,     self.m43,     self.m44
+        )
     }
 
     /// Returns the given point transformed by this matrix.
     #[inline]
-    pub fn transform_point(&self, p: &Point2D<T, Src>) -> Point2D<T, Dst> {
-        Point2D::new(p.x * self.m11 + p.y * self.m21 + self.m41,
+    pub fn transform_point(&self, p: &TypedPoint2D<T, Src>) -> TypedPoint2D<T, Dst> {
+        TypedPoint2D::new(p.x * self.m11 + p.y * self.m21 + self.m41,
                      p.x * self.m12 + p.y * self.m22 + self.m42)
     }
 
     #[inline]
-    pub fn transform_point4d(&self, p: &Point4D<T, Src>) -> Point4D<T, Dst> {
+    pub fn transform_point4d(&self, p: &TypedPoint4D<T, Src>) -> TypedPoint4D<T, Dst> {
         let x = p.x * self.m11 + p.y * self.m21 + p.z * self.m31 + self.m41;
         let y = p.x * self.m12 + p.y * self.m22 + p.z * self.m32 + self.m42;
         let z = p.x * self.m13 + p.y * self.m23 + p.z * self.m33 + self.m43;
         let w = p.x * self.m14 + p.y * self.m24 + p.z * self.m34 + self.m44;
-        Point4D::new(x, y, z, w)
-    }
-
-    pub fn to_array(&self) -> [T; 16] {
-        [
-            self.m11, self.m12, self.m13, self.m14,
-            self.m21, self.m22, self.m23, self.m24,
-            self.m31, self.m32, self.m33, self.m34,
-            self.m41, self.m42, self.m43, self.m44
-        ]
+        TypedPoint4D::new(x, y, z, w)
     }
 
     pub fn translate(&self, x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
         let (_0, _1): (T, T) = (Zero::zero(), One::one());
-        let matrix = TypedMatrix4D::new(_1, _0, _0, _0,
-                                   _0, _1, _0, _0,
-                                   _0, _0, _1, _0,
-                                    x,  y,  z, _1);
+        let matrix = TypedMatrix4D::new(
+            _1, _0, _0, _0,
+            _0, _1, _0, _0,
+            _0, _0, _1, _0,
+             x,  y,  z, _1
+        );
         self.mul(&matrix)
     }
 
     /// Create a 3d translation matrix
     pub fn create_translation(x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
         let (_0, _1): (T, T) = (Zero::zero(), One::one());
-        TypedMatrix4D::new(_1, _0, _0, _0,
-                      _0, _1, _0, _0,
-                      _0, _0, _1, _0,
-                       x,  y,  z, _1)
+        TypedMatrix4D::new(
+            _1, _0, _0, _0,
+            _0, _1, _0, _0,
+            _0, _0, _1, _0,
+             x,  y,  z, _1
+        )
     }
 
     /// Create a 3d scale matrix
     pub fn create_scale(x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
         let (_0, _1): (T, T) = (Zero::zero(), One::one());
-        TypedMatrix4D::new( x, _0, _0, _0,
-                      _0,  y, _0, _0,
-                      _0, _0,  z, _0,
-                      _0, _0, _0, _1)
+        TypedMatrix4D::new(
+             x, _0, _0, _0,
+            _0,  y, _0, _0,
+            _0, _0,  z, _0,
+            _0, _0, _0, _1
+        )
     }
 
     /// Create a 3d rotation matrix from an angle / axis.
@@ -383,14 +394,38 @@ impl <T:Add<T, Output=T> +
     }
 }
 
+impl<T: Copy, Src, Dst> TypedMatrix4D<T, Src, Dst> {
+    pub fn to_array(&self) -> [T; 16] {
+        [
+            self.m11, self.m12, self.m13, self.m14,
+            self.m21, self.m22, self.m23, self.m24,
+            self.m31, self.m32, self.m33, self.m34,
+            self.m41, self.m42, self.m43, self.m44
+        ]
+    }
+}
 
+impl<T: Copy+fmt::Debug, Src, Dst> fmt::Debug for TypedMatrix4D<T, Src, Dst> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.to_array().fmt(f)
+    }
+}
+
+impl<T: PartialEq, Src, Dst> PartialEq for TypedMatrix4D<T, Src, Dst> {
+    fn eq(&self, other: &Self) -> bool {
+        self.m11 == other.m11 && self.m12 == other.m12 && self.m13 == other.m13 && self.m14 == other.m14 &&
+        self.m21 == other.m21 && self.m22 == other.m22 && self.m23 == other.m23 && self.m24 == other.m24 &&
+        self.m31 == other.m31 && self.m32 == other.m32 && self.m33 == other.m33 && self.m34 == other.m34 &&
+        self.m41 == other.m41 && self.m42 == other.m42 && self.m43 == other.m43 && self.m44 == other.m44
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use point::{Point2D};
     use super::*;
 
-    type Mf32 = TypedMatrix4D<f32>;
+    type Mf32 = Matrix4D<f32>;
 
     #[test]
     pub fn test_ortho() {

@@ -7,11 +7,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use length::{ Length, Unit, Untyped };
+use length::{Length, Untyped};
 use scale_factor::ScaleFactor;
 use num::Zero;
-use point::Point2D;
-use size::Size2D;
+use point::TypedPoint2D;
+use size::TypedSize2D;
 
 use heapsize::HeapSizeOf;
 use num_traits::NumCast;
@@ -19,35 +19,30 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::PartialOrd;
 use std::fmt;
 use std::ops::{Add, Sub, Mul, Div};
-use std::marker::PhantomData;
 
-#[derive(RustcDecodable, RustcEncodable)]
-#[cfg_attr(feature = "plugins", derive(HeapSizeOf, Deserialize, Serialize))]
-pub struct Rect<T, U = Untyped> {
-    pub origin: Point2D<T, U>,
-    pub size: Size2D<T, U>,
-    _unit: PhantomData<U>,
+pub struct TypedRect<T, U = Untyped> {
+    pub origin: TypedPoint2D<T, U>,
+    pub size: TypedSize2D<T, U>,
 }
 
-impl<T: HeapSizeOf, U> HeapSizeOf for Rect<T, U> {
+pub type Rect<T> = TypedRect<T, Untyped>;
+
+impl<T: HeapSizeOf, U> HeapSizeOf for TypedRect<T, U> {
     fn heap_size_of_children(&self) -> usize {
         self.origin.heap_size_of_children() + self.size.heap_size_of_children()
     }
 }
 
-impl<T: Clone + Deserialize, U> Deserialize for Rect<T, U> {
+impl<T: Clone + Deserialize, U> Deserialize for TypedRect<T, U> {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: Deserializer
     {
         let (origin, size) = try!(Deserialize::deserialize(deserializer));
-        Ok(Rect {
-            origin: origin,
-            size: size,
-        })
+        Ok(TypedRect::new(origin, size))
     }
 }
 
-impl<T: Serialize, U> Serialize for Rect<T> {
+impl<T: Serialize, U> Serialize for TypedRect<T, U> {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer
     {
@@ -55,47 +50,46 @@ impl<T: Serialize, U> Serialize for Rect<T> {
     }
 }
 
-impl<T: Copy, U> Copy for Rect<T, U> {}
+impl<T: Copy, U> Copy for TypedRect<T, U> {}
 
-impl<T: Clone, U> Clone for Rect<T, U> {
-    fn clone(&self) -> Rect<T, U> {
-        Rect::new(self.origin.clone(), self.size.clone())
+impl<T: Clone, U> Clone for TypedRect<T, U> {
+    fn clone(&self) -> TypedRect<T, U> {
+        TypedRect::new(self.origin.clone(), self.size.clone())
     }
 }
 
-impl<T: PartialEq, U> PartialEq<Rect<T, U>> for Rect<T, U> {
-    fn eq(&self, other: &Rect<T, U>) -> bool {
+impl<T: PartialEq, U> PartialEq<TypedRect<T, U>> for TypedRect<T, U> {
+    fn eq(&self, other: &TypedRect<T, U>) -> bool {
         self.origin.eq(&other.origin) && self.size.eq(&other.size)
     }
 }
 
-impl<T: Eq, U> Eq for Rect<T, U> {}
+impl<T: Eq, U> Eq for TypedRect<T, U> {}
 
-impl<T: fmt::Debug, U> fmt::Debug for Rect<T, U> {
+impl<T: fmt::Debug, U> fmt::Debug for TypedRect<T, U> {
    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Rect({:?} at {:?})", self.size, self.origin)
+        write!(f, "TypedRect({:?} at {:?})", self.size, self.origin)
     }
 }
 
-impl<T: fmt::Display, U> fmt::Display for Rect<T, U> {
+impl<T: fmt::Display, U> fmt::Display for TypedRect<T, U> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "Rect({} at {})", self.size.to_string(), self.origin.to_string())
+        write!(formatter, "TypedRect({} at {})", self.size.to_string(), self.origin.to_string())
     }
 }
 
-impl<T, U> Rect<T, U> {
-    pub fn new(origin: Point2D<T, U>, size: Size2D<T, U>) -> Rect<T, U> {
-        Rect {
+impl<T, U> TypedRect<T, U> {
+    pub fn new(origin: TypedPoint2D<T, U>, size: TypedSize2D<T, U>) -> TypedRect<T, U> {
+        TypedRect {
             origin: origin,
             size: size,
-            _unit: PhantomData,
         }
     }
 }
 
-impl<T: Copy + Clone + PartialOrd + Add<T, Output=T> + Sub<T, Output=T>, U> Rect<T, U> {
+impl<T: Copy + Clone + PartialOrd + Add<T, Output=T> + Sub<T, Output=T>, U> TypedRect<T, U> {
     #[inline]
-    pub fn intersects(&self, other: &Rect<T, U>) -> bool {
+    pub fn intersects(&self, other: &TypedRect<T, U>) -> bool {
         self.origin.x < other.origin.x + other.size.width &&
        other.origin.x <  self.origin.x + self.size.width &&
         self.origin.y < other.origin.y + other.size.height &&
@@ -123,66 +117,91 @@ impl<T: Copy + Clone + PartialOrd + Add<T, Output=T> + Sub<T, Output=T>, U> Rect
     }
 
     #[inline]
-    pub fn intersection(&self, other: &Rect<T, U>) -> Option<Rect<T, U>> {
+    pub fn get_max_x(&self) -> Length<T, U> {
+        Length::new(self.max_x())
+    }
+
+    #[inline]
+    pub fn get_min_x(&self) -> Length<T, U> {
+        Length::new(self.min_x())
+    }
+
+    #[inline]
+    pub fn get_max_y(&self) -> Length<T, U> {
+        Length::new(self.max_y())
+    }
+
+    #[inline]
+    pub fn get_min_y(&self) -> Length<T, U> {
+        Length::new(self.min_y())
+    }
+
+    #[inline]
+    pub fn intersection(&self, other: &TypedRect<T, U>) -> Option<TypedRect<T, U>> {
         if !self.intersects(other) {
             return None;
         }
 
-        let upper_left = Point2D::new(max(self.min_x(), other.min_x()),
+        let upper_left = TypedPoint2D::new(max(self.min_x(), other.min_x()),
                                       max(self.min_y(), other.min_y()));
         let lower_right_x = min(self.max_x(), other.max_x());
         let lower_right_y = min(self.max_y(), other.max_y());
 
-        Some(Rect::new(upper_left.clone(), Size2D::new(lower_right_x - upper_left.x,
-                                                       lower_right_y - upper_left.y)))
+        Some(TypedRect::new(upper_left.clone(), TypedSize2D::new(lower_right_x - upper_left.x,
+                                                            lower_right_y - upper_left.y)))
     }
 
     #[inline]
-    pub fn translate(&self, other: &Point2D<T, U>) -> Rect<T, U> {
-        Rect::new(
-            Point2D::new(self.origin.x + other.x, self.origin.y + other.y),
+    pub fn translate(&self, other: &TypedPoint2D<T, U>) -> TypedRect<T, U> {
+        TypedRect::new(
+            TypedPoint2D::new(self.origin.x + other.x, self.origin.y + other.y),
             self.size
         )
     }
 
     #[inline]
-    pub fn contains(&self, other: &Point2D<T, U>) -> bool {
+    pub fn contains(&self, other: &TypedPoint2D<T, U>) -> bool {
         self.origin.x <= other.x && other.x < self.origin.x + self.size.width &&
         self.origin.y <= other.y && other.y < self.origin.y + self.size.height
     }
 
     #[inline]
-    pub fn inflate(&self, width: T, height: T) -> Rect<T, U> {
-        Rect::new(
-            Point2D::new(self.origin.x - width, self.origin.y - height),
-            Size2D::new(self.size.width + width + width, self.size.height + height + height),
+    pub fn inflate(&self, width: T, height: T) -> TypedRect<T, U> {
+        TypedRect::new(
+            TypedPoint2D::new(self.origin.x - width, self.origin.y - height),
+            TypedSize2D::new(self.size.width + width + width, self.size.height + height + height),
         )
     }
 
     #[inline]
-    pub fn top_right(&self) -> Point2D<T, U> {
-        Point2D::new(self.max_x(), self.origin.y)
+    pub fn inflate_typed(&self, width: Length<T, U>, height: Length<T, U>) -> TypedRect<T, U> {
+        self.inflate(width.get(), height.get())
     }
 
     #[inline]
-    pub fn bottom_left(&self) -> Point2D<T, U> {
-        Point2D::new(self.origin.x.clone(), self.max_y())
+    pub fn top_right(&self) -> TypedPoint2D<T, U> {
+        TypedPoint2D::new(self.max_x(), self.origin.y)
     }
 
     #[inline]
-    pub fn bottom_right(&self) -> Point2D<T, U> {
-        Point2D::new(self.max_x(), self.max_y())
+    pub fn bottom_left(&self) -> TypedPoint2D<T, U> {
+        TypedPoint2D::new(self.origin.x.clone(), self.max_y())
     }
 
     #[inline]
-    pub fn translate_by_size(&self, size: &Size2D<T, U>) -> Rect<T, U> {
-        self.translate(&Point2D::new(size.width, size.height))
+    pub fn bottom_right(&self) -> TypedPoint2D<T, U> {
+        TypedPoint2D::new(self.max_x(), self.max_y())
+    }
+
+    #[inline]
+    pub fn translate_by_size(&self, size: &TypedSize2D<T, U>) -> TypedRect<T, U> {
+        self.translate(&TypedPoint2D::new(size.width, size.height))
     }
 }
 
-impl<T: Copy + Clone + PartialOrd + Add<T, Output=T> + Sub<T, Output=T> + Zero, U> Rect<T, U> {
+impl<T: Copy + Clone + PartialOrd + Add<T, Output=T> + Sub<T, Output=T> + Zero, U> TypedRect<T, U> {
     #[inline]
-    pub fn union(&self, other: &Rect<T, U>) -> Rect<T, U> {
+    pub fn union(&self, other: &TypedRect<T, U>) -> TypedRect<T, U> {
         if self.size == Zero::zero() {
             return other.clone();
         }
@@ -190,35 +209,35 @@ impl<T: Copy + Clone + PartialOrd + Add<T, Output=T> + Sub<T, Output=T> + Zero, 
             return self.clone();
         }
 
-        let upper_left = Point2D::new(min(self.min_x(), other.min_x()),
+        let upper_left = TypedPoint2D::new(min(self.min_x(), other.min_x()),
                                       min(self.min_y(), other.min_y()));
 
         let lower_right_x = max(self.max_x(), other.max_x());
         let lower_right_y = max(self.max_y(), other.max_y());
 
-        Rect::new(
+        TypedRect::new(
             upper_left,
-            Size2D::new(lower_right_x - upper_left.x, lower_right_y - upper_left.y)
+            TypedSize2D::new(lower_right_x - upper_left.x, lower_right_y - upper_left.y)
         )
     }
 }
 
-impl<T, U> Rect<T, U> {
+impl<T, U> TypedRect<T, U> {
     #[inline]
-    pub fn scale<Scale: Copy>(&self, x: Scale, y: Scale) -> Rect<T, U>
+    pub fn scale<Scale: Copy>(&self, x: Scale, y: Scale) -> TypedRect<T, U>
         where T: Copy + Clone + Mul<Scale, Output=T> {
-        Rect::new(
-            Point2D::new(self.origin.x * x, self.origin.y * y),
-            Size2D::new(self.size.width * x, self.size.height * y)
+        TypedRect::new(
+            TypedPoint2D::new(self.origin.x * x, self.origin.y * y),
+            TypedSize2D::new(self.size.width * x, self.size.height * y)
         )
     }
 }
 
-impl<T: PartialEq + Zero, U> Rect<T, U> {
-    pub fn zero() -> Rect<T, U> {
-        Rect::new(
-            Point2D::zero(),
-            Size2D::zero(),
+impl<T: PartialEq + Zero, U> TypedRect<T, U> {
+    pub fn zero() -> TypedRect<T, U> {
+        TypedRect::new(
+            TypedPoint2D::zero(),
+            TypedSize2D::zero(),
         )
     }
 
@@ -236,70 +255,70 @@ pub fn max<T:Clone + PartialOrd>(x: T, y: T) -> T {
     if x >= y { x } else { y }
 }
 
-impl<T: Copy + Mul<T, Output=T>, U> Mul<T> for Rect<T, U> {
-    type Output = Rect<T, U>;
+impl<T: Copy + Mul<T, Output=T>, U> Mul<T> for TypedRect<T, U> {
+    type Output = TypedRect<T, U>;
     #[inline]
-    fn mul(self, scale: T) -> Rect<T, U> {
-        Rect::new(self.origin * scale, self.size * scale)
+    fn mul(self, scale: T) -> TypedRect<T, U> {
+        TypedRect::new(self.origin * scale, self.size * scale)
     }
 }
 
-impl<T: Copy + Div<T, Output=T>, U> Div<T> for Rect<T, U> {
-    type Output = Rect<T, U>;
+impl<T: Copy + Div<T, Output=T>, U> Div<T> for TypedRect<T, U> {
+    type Output = TypedRect<T, U>;
     #[inline]
-    fn div(self, scale: T) -> Rect<T, U> {
-        Rect::new(self.origin / scale, self.size / scale)
+    fn div(self, scale: T) -> TypedRect<T, U> {
+        TypedRect::new(self.origin / scale, self.size / scale)
     }
 }
 
-impl<T: Copy + Mul<T, Output=T>, U1, U2> Mul<ScaleFactor<T, U1, U2>> for Rect<T, U1> {
-    type Output = Rect<T, U2>;
+impl<T: Copy + Mul<T, Output=T>, U1, U2> Mul<ScaleFactor<T, U1, U2>> for TypedRect<T, U1> {
+    type Output = TypedRect<T, U2>;
     #[inline]
-    fn mul(self, scale: ScaleFactor<T, U1, U2>) -> Rect<T, U2> {
-        Rect::new(self.origin * scale.clone(), self.size * scale.clone())
+    fn mul(self, scale: ScaleFactor<T, U1, U2>) -> TypedRect<T, U2> {
+        TypedRect::new(self.origin * scale.clone(), self.size * scale.clone())
     }
 }
 
-impl<T: Copy + Div<T, Output=T>, U1, U2> Div<ScaleFactor<T, U1, U2>> for Rect<T, U2> {
-    type Output = Rect<T, U1>;
+impl<T: Copy + Div<T, Output=T>, U1, U2> Div<ScaleFactor<T, U1, U2>> for TypedRect<T, U2> {
+    type Output = TypedRect<T, U1>;
     #[inline]
-    fn div(self, scale: ScaleFactor<T, U1, U2>) -> Rect<T, U1> {
-        Rect::new(self.origin / scale.clone(), self.size / scale.clone())
+    fn div(self, scale: ScaleFactor<T, U1, U2>) -> TypedRect<T, U1> {
+        TypedRect::new(self.origin / scale.clone(), self.size / scale.clone())
     }
 }
 
-// Convenient aliases for Rect with typed units
-pub type TypedRect<Unit, T> = Rect<T, Unit>;
+// Convenient aliases for TypedRect with typed units
+pub type TypedTypedRect<Unit, T> = TypedRect<T, Unit>;
 
-impl<Unit:Clone, T: Clone> Rect<T, Unit> {
+impl<Unit:Clone, T: Clone> TypedRect<T, Unit> {
     /// Drop the units, preserving only the numeric value.
-    pub fn to_untyped(&self) -> Rect<T> {
-        Rect::new(self.origin.to_untyped(), self.size.to_untyped())
+    pub fn to_untyped(&self) -> TypedRect<T> {
+        TypedRect::new(self.origin.to_untyped(), self.size.to_untyped())
     }
 
     /// Tag a unitless value with units.
-    pub fn from_untyped(r: &Rect<T>) -> TypedRect<Unit, T> {
-        Rect::new(Point2D::from_untyped(&r.origin), Size2D::from_untyped(&r.size))
+    pub fn from_untyped(r: &TypedRect<T>) -> TypedTypedRect<Unit, T> {
+        TypedRect::new(TypedPoint2D::from_untyped(&r.origin), TypedSize2D::from_untyped(&r.size))
     }
 }
 
-impl<Unit: Clone, T0: NumCast + Clone> Rect<T0, Unit> {
+impl<Unit: Clone, T0: NumCast + Clone> TypedRect<T0, Unit> {
     /// Cast from one numeric representation to another, preserving the units.
-    pub fn cast<T1: NumCast + Clone>(&self) -> Option<Rect<T1, Unit>> {
+    pub fn cast<T1: NumCast + Clone>(&self) -> Option<TypedRect<T1, Unit>> {
         match (self.origin.cast(), self.size.cast()) {
-            (Some(origin), Some(size)) => Some(Rect::new(origin, size)),
+            (Some(origin), Some(size)) => Some(TypedRect::new(origin, size)),
             _ => None
         }
     }
 }
 
 // Convenience functions for common casts
-impl<Unit: Clone, T: NumCast + Clone> Rect<T, Unit> {
-    pub fn as_f32(&self) -> Rect<f32, Unit> {
+impl<Unit: Clone, T: NumCast + Clone> TypedRect<T, Unit> {
+    pub fn as_f32(&self) -> TypedRect<f32, Unit> {
         self.cast().unwrap()
     }
 
-    pub fn as_uint(&self) -> Rect<usize, Unit> {
+    pub fn as_uint(&self) -> TypedRect<usize, Unit> {
         self.cast().unwrap()
     }
 }

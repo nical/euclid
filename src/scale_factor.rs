@@ -30,10 +30,10 @@ use std::marker::PhantomData;
 /// enum Mm {};
 /// enum Inch {};
 ///
-/// let mm_per_inch: ScaleFactor<Inch, Mm, f32> = ScaleFactor::new(25.4);
+/// let mm_per_inch: ScaleFactor<f32, Inch, Mm> = ScaleFactor::new(25.4);
 ///
-/// let one_foot: Length<Inch, f32> = Length::new(12.0);
-/// let one_foot_in_mm: Length<Mm, f32> = one_foot * mm_per_inch;
+/// let one_foot: Length<f32, Inch> = Length::new(12.0);
+/// let one_foot_in_mm: Length<f32, Mm> = one_foot * mm_per_inch;
 /// ```
 // Uncomment the derive, and remove the macro call, once heapsize gets
 // PhantomData<T> support.
@@ -41,20 +41,20 @@ use std::marker::PhantomData;
 #[cfg_attr(feature = "plugins", derive(HeapSizeOf))]
 pub struct ScaleFactor<T, Src, Dst>(pub T, PhantomData<(Src, Dst)>);
 
-impl<Src, Dst, T: HeapSizeOf> HeapSizeOf for ScaleFactor<Src, Dst, T> {
+impl<T: HeapSizeOf, Src, Dst> HeapSizeOf for ScaleFactor<T, Src, Dst> {
     fn heap_size_of_children(&self) -> usize {
         self.0.heap_size_of_children()
     }
 }
 
-impl<Src, Dst, T> Deserialize for ScaleFactor<Src, Dst, T> where T: Deserialize {
-    fn deserialize<D>(deserializer: &mut D) -> Result<ScaleFactor<Src,Dst,T>,D::Error>
+impl<T, Src, Dst> Deserialize for ScaleFactor<T, Src, Dst> where T: Deserialize {
+    fn deserialize<D>(deserializer: &mut D) -> Result<ScaleFactor<T, Src, Dst>, D::Error>
                       where D: Deserializer {
         Ok(ScaleFactor(try!(Deserialize::deserialize(deserializer)), PhantomData))
     }
 }
 
-impl<Src, Dst, T> Serialize for ScaleFactor<Src, Dst, T> where T: Serialize {
+impl<T, Src, Dst> Serialize for ScaleFactor<T, Src, Dst> where T: Serialize {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(),S::Error> where S: Serializer {
         self.0.serialize(serializer)
     }
@@ -152,8 +152,8 @@ mod tests {
         let cm_per_inch: ScaleFactor<f32, Inch, Cm> = mm_per_inch * cm_per_mm;
         assert_eq!(cm_per_inch, ScaleFactor::new(2.54));
 
-        let a: ScaleFactor<Inch, Inch, isize> = ScaleFactor::new(2);
-        let b: ScaleFactor<Inch, Inch, isize> = ScaleFactor::new(3);
+        let a: ScaleFactor<isize, Inch, Inch> = ScaleFactor::new(2);
+        let b: ScaleFactor<isize, Inch, Inch> = ScaleFactor::new(3);
         assert!(a != b);
         assert_eq!(a, a.clone());
         assert_eq!(a.clone() + b.clone(), ScaleFactor::new(5));
