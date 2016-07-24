@@ -12,6 +12,7 @@ use trig::Trig;
 use point::{TypedPoint2D, TypedPoint4D};
 use matrix2d::TypedMatrix2D;
 use length::Untyped;
+use scale_factor::ScaleFactor;
 use num::{One, Zero};
 use std::ops::{Add, Mul, Sub, Div, Neg};
 use std::marker::PhantomData;
@@ -44,6 +45,12 @@ impl<T, Src, Dst> TypedMatrix4D<T, Src, Dst> {
             _unit: PhantomData,
         }
     }
+}
+
+impl<T: Copy, Src, Dst> Copy for TypedMatrix4D<T, Src, Dst> {}
+
+impl<T: Copy, Src, Dst> Clone for TypedMatrix4D<T, Src, Dst> {
+    fn clone(&self) -> Self { *self }
 }
 
 impl <T:Add<T, Output=T> +
@@ -142,28 +149,37 @@ impl <T:Add<T, Output=T> +
         self.m43.approx_eq(&other.m43) && self.m44.approx_eq(&other.m44)
     }
 
-    pub fn mul<Dst2>(&self, m: &TypedMatrix4D<T, Dst, Dst2>) -> TypedMatrix4D<T, Src, Dst2> {
+    pub fn to<Destination>(&self) -> TypedMatrix4D<T, Src, Destination> {
         TypedMatrix4D::new(
-            m.m11*self.m11 + m.m12*self.m21 + m.m13*self.m31 + m.m14*self.m41,
-            m.m11*self.m12 + m.m12*self.m22 + m.m13*self.m32 + m.m14*self.m42,
-            m.m11*self.m13 + m.m12*self.m23 + m.m13*self.m33 + m.m14*self.m43,
-            m.m11*self.m14 + m.m12*self.m24 + m.m13*self.m34 + m.m14*self.m44,
-            m.m21*self.m11 + m.m22*self.m21 + m.m23*self.m31 + m.m24*self.m41,
-            m.m21*self.m12 + m.m22*self.m22 + m.m23*self.m32 + m.m24*self.m42,
-            m.m21*self.m13 + m.m22*self.m23 + m.m23*self.m33 + m.m24*self.m43,
-            m.m21*self.m14 + m.m22*self.m24 + m.m23*self.m34 + m.m24*self.m44,
-            m.m31*self.m11 + m.m32*self.m21 + m.m33*self.m31 + m.m34*self.m41,
-            m.m31*self.m12 + m.m32*self.m22 + m.m33*self.m32 + m.m34*self.m42,
-            m.m31*self.m13 + m.m32*self.m23 + m.m33*self.m33 + m.m34*self.m43,
-            m.m31*self.m14 + m.m32*self.m24 + m.m33*self.m34 + m.m34*self.m44,
-            m.m41*self.m11 + m.m42*self.m21 + m.m43*self.m31 + m.m44*self.m41,
-            m.m41*self.m12 + m.m42*self.m22 + m.m43*self.m32 + m.m44*self.m42,
-            m.m41*self.m13 + m.m42*self.m23 + m.m43*self.m33 + m.m44*self.m43,
-            m.m41*self.m14 + m.m42*self.m24 + m.m43*self.m34 + m.m44*self.m44
+            self.m11, self.m12, self.m13, self.m14,
+            self.m21, self.m22, self.m23, self.m24,
+            self.m31, self.m32, self.m33, self.m34,
+            self.m41, self.m42, self.m43, self.m44,
         )
     }
 
-    pub fn invert(&self) -> TypedMatrix4D<T, Src, Dst> {
+    pub fn mul<NewSrc>(&self, mat: &TypedMatrix4D<T, NewSrc, Src>) -> TypedMatrix4D<T, NewSrc, Dst> {
+        TypedMatrix4D::new(
+            mat.m11*self.m11 + mat.m12*self.m21 + mat.m13*self.m31 + mat.m14*self.m41,
+            mat.m11*self.m12 + mat.m12*self.m22 + mat.m13*self.m32 + mat.m14*self.m42,
+            mat.m11*self.m13 + mat.m12*self.m23 + mat.m13*self.m33 + mat.m14*self.m43,
+            mat.m11*self.m14 + mat.m12*self.m24 + mat.m13*self.m34 + mat.m14*self.m44,
+            mat.m21*self.m11 + mat.m22*self.m21 + mat.m23*self.m31 + mat.m24*self.m41,
+            mat.m21*self.m12 + mat.m22*self.m22 + mat.m23*self.m32 + mat.m24*self.m42,
+            mat.m21*self.m13 + mat.m22*self.m23 + mat.m23*self.m33 + mat.m24*self.m43,
+            mat.m21*self.m14 + mat.m22*self.m24 + mat.m23*self.m34 + mat.m24*self.m44,
+            mat.m31*self.m11 + mat.m32*self.m21 + mat.m33*self.m31 + mat.m34*self.m41,
+            mat.m31*self.m12 + mat.m32*self.m22 + mat.m33*self.m32 + mat.m34*self.m42,
+            mat.m31*self.m13 + mat.m32*self.m23 + mat.m33*self.m33 + mat.m34*self.m43,
+            mat.m31*self.m14 + mat.m32*self.m24 + mat.m33*self.m34 + mat.m34*self.m44,
+            mat.m41*self.m11 + mat.m42*self.m21 + mat.m43*self.m31 + mat.m44*self.m41,
+            mat.m41*self.m12 + mat.m42*self.m22 + mat.m43*self.m32 + mat.m44*self.m42,
+            mat.m41*self.m13 + mat.m42*self.m23 + mat.m43*self.m33 + mat.m44*self.m43,
+            mat.m41*self.m14 + mat.m42*self.m24 + mat.m43*self.m34 + mat.m44*self.m44
+        )
+    }
+
+    pub fn invert(&self) -> TypedMatrix4D<T, Dst, Src> {
         let det = self.determinant();
 
         if det == Zero::zero() {
@@ -278,6 +294,18 @@ impl <T:Add<T, Output=T> +
         )
     }
 
+    pub fn from_scale_factor(scale: ScaleFactor<T, Src, Dst>) -> TypedMatrix4D<T, Src, Dst> {
+        let z = Zero::zero();
+        let one = One::one();
+        let s = scale.get();
+        TypedMatrix4D::new(
+            s, z, z, z,
+            z, s, z, z,
+            z, z, s, z,
+            z, z, z, one
+        )
+    }
+
     pub fn scale(&self, x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
         TypedMatrix4D::new(
             self.m11 * x, self.m12,     self.m13,     self.m14,
@@ -291,7 +319,7 @@ impl <T:Add<T, Output=T> +
     #[inline]
     pub fn transform_point(&self, p: &TypedPoint2D<T, Src>) -> TypedPoint2D<T, Dst> {
         TypedPoint2D::new(p.x * self.m11 + p.y * self.m21 + self.m41,
-                     p.x * self.m12 + p.y * self.m22 + self.m42)
+                          p.x * self.m12 + p.y * self.m22 + self.m42)
     }
 
     #[inline]
@@ -304,14 +332,7 @@ impl <T:Add<T, Output=T> +
     }
 
     pub fn translate(&self, x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
-        let (_0, _1): (T, T) = (Zero::zero(), One::one());
-        let matrix = TypedMatrix4D::new(
-            _1, _0, _0, _0,
-            _0, _1, _0, _0,
-            _0, _0, _1, _0,
-             x,  y,  z, _1
-        );
-        self.mul(&matrix)
+        self.mul(&TypedMatrix4D::create_translation(x, y, z))
     }
 
     /// Create a 3d translation matrix
@@ -422,7 +443,7 @@ impl<T: PartialEq, Src, Dst> PartialEq for TypedMatrix4D<T, Src, Dst> {
 
 #[cfg(test)]
 mod tests {
-    use point::{Point2D};
+    use point::{Point2D, Point4D};
     use super::*;
 
     type Mf32 = Matrix4D<f32>;
@@ -497,5 +518,15 @@ mod tests {
 
         let p3 = m2.transform_point(&p2);
         assert!(p3.eq(&p1));
+    }
+
+    #[test]
+    pub fn test_premultiply() {
+        use std::f32::consts::PI;
+        let v = Point2D::new(1.0, 0.0);
+        let r = Matrix4D::create_rotation(0.0, 0.0, 1.0,  PI/2.0);
+        let t = Matrix4D::create_translation(1.0, 0.0, 0.0);
+        assert_eq!(r.mul(&t).transform_point(&v), r.transform_point(&t.transform_point(&v)));
+        assert_eq!(t.mul(&r).transform_point(&v), t.transform_point(&r.transform_point(&v)));
     }
 }

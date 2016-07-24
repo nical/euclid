@@ -17,6 +17,7 @@ use std::fmt;
 use std::ops::{Add, Neg, Mul, Sub, Div};
 use std::marker::PhantomData;
 use std::cmp::{ PartialEq, Eq };
+use std::hash::{ Hash, Hasher };
 
 define_vector! {
     #[derive(RustcDecodable, RustcEncodable)]
@@ -44,6 +45,13 @@ impl<T: PartialEq, U> PartialEq<TypedPoint2D<T, U>> for TypedPoint2D<T, U> {
 }
 
 impl<T: Eq, U> Eq for TypedPoint2D<T, U> {}
+
+impl<T: Hash, U> Hash for TypedPoint2D<T, U> {
+    fn hash<H: Hasher>(&self, h: &mut H) {
+        self.x.hash(h);
+        self.y.hash(h);
+    }
+}
 
 impl<T: Zero, U> TypedPoint2D<T, U> {
     pub fn zero() -> TypedPoint2D<T, U> {
@@ -219,6 +227,14 @@ define_vector! {
 
 pub type Point3D<T> = TypedPoint3D<T, Untyped>;
 
+impl<T: Hash, U> Hash for TypedPoint3D<T, U> {
+    fn hash<H: Hasher>(&self, h: &mut H) {
+        self.x.hash(h);
+        self.y.hash(h);
+        self.z.hash(h);
+    }
+}
+
 impl<T: Zero, U> TypedPoint3D<T, U> {
     #[inline]
     pub fn zero() -> TypedPoint3D<T, U> {
@@ -362,6 +378,15 @@ impl<T: PartialEq, U> PartialEq<TypedPoint4D<T, U>> for TypedPoint4D<T, U> {
 }
 
 impl<T: Eq, U> Eq for TypedPoint4D<T, U> {}
+
+impl<T: Hash, U> Hash for TypedPoint4D<T, U> {
+    fn hash<H: Hasher>(&self, h: &mut H) {
+        self.x.hash(h);
+        self.y.hash(h);
+        self.z.hash(h);
+        self.w.hash(h);
+    }
+}
 
 impl<T: Zero, U> TypedPoint4D<T, U> {
     #[inline]

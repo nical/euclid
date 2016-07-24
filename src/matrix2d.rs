@@ -55,7 +55,7 @@ impl<T:Add<T, Output=T> +
        Sub<T, Output=T> +
        Zero, Src, Dst> TypedMatrix2D<T, Src, Dst> {
 
-    pub fn mul<Dst2>(&self, m: &TypedMatrix2D<T, Dst, Dst2>) -> TypedMatrix2D<T, Src, Dst2> {
+    pub fn mul<NewSrc>(&self, m: &TypedMatrix2D<T, NewSrc, Src>) -> TypedMatrix2D<T, NewSrc, Dst> {
         TypedMatrix2D::new(
             m.m11*self.m11 + m.m12*self.m21,
             m.m11*self.m12 + m.m12*self.m22,
