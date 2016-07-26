@@ -9,7 +9,7 @@
 
 use length::{Length, UnknownUnit};
 use scale_factor::ScaleFactor;
-use num::Zero;
+use num::*;
 
 use num_traits::NumCast;
 use std::fmt;
@@ -67,6 +67,24 @@ impl<T, U> TypedSize2D<T, U> {
 impl<T: Clone, U> TypedSize2D<T, U> {
     pub fn from_lengths(width: Length<T, U>, height: Length<T, U>) -> TypedSize2D<T, U> {
         TypedSize2D::new(width.get(), height.get())
+    }
+}
+
+impl<T: Round, U> TypedSize2D<T, U> {
+    pub fn round(&self) -> Self {
+        TypedSize2D::new(self.width.round(), self.height.round())
+    }
+}
+
+impl<T: Ceil, U> TypedSize2D<T, U> {
+    pub fn ceil(&self) -> Self {
+        TypedSize2D::new(self.height.ceil(), self.width.ceil())
+    }
+}
+
+impl<T: Floor, U> TypedSize2D<T, U> {
+    pub fn floor(&self) -> Self {
+        TypedSize2D::new(self.width.floor(), self.height.floor())
     }
 }
 
@@ -155,6 +173,14 @@ impl<Unit, T: NumCast + Clone> TypedSize2D<T, Unit> {
     }
 
     pub fn as_uint(&self) -> TypedSize2D<usize, Unit> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i32(&self) -> TypedSize2D<i32, Unit> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i64(&self) -> TypedSize2D<i64, Unit> {
         self.cast().unwrap()
     }
 }

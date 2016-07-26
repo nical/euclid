@@ -9,7 +9,7 @@
 
 use length::{Length, UnknownUnit};
 use scale_factor::ScaleFactor;
-use num::Zero;
+use num::*;
 use point::TypedPoint2D;
 use size::TypedSize2D;
 
@@ -89,7 +89,7 @@ impl<T, U> TypedRect<T, U> {
 }
 
 impl<T, U> TypedRect<T, U>
-where T: Copy + Clone + PartialOrd + Add<T, Output=T> + Sub<T, Output=T> {
+where T: Copy + Clone + Zero + PartialOrd + PartialEq + Add<T, Output=T> + Sub<T, Output=T> {
     #[inline]
     pub fn intersects(&self, other: &TypedRect<T, U>) -> bool {
         self.origin.x < other.origin.x + other.size.width &&
@@ -161,10 +161,23 @@ where T: Copy + Clone + PartialOrd + Add<T, Output=T> + Sub<T, Output=T> {
         )
     }
 
+    /// Returns true if this rectangle contains the point. Points are considered
+    /// in the rectangle if they are on the left or top edge, but outside if they
+    /// are on the right or bottom edge.
     #[inline]
     pub fn contains(&self, other: &TypedPoint2D<T, U>) -> bool {
         self.origin.x <= other.x && other.x < self.origin.x + self.size.width &&
         self.origin.y <= other.y && other.y < self.origin.y + self.size.height
+    }
+
+    /// Returns true if this rectangle contains the interior of rect. Always
+    /// returns true if rect is empty, and always returns false if rect is
+    /// nonempty but this rectangle is empty.
+    #[inline]
+    pub fn contains_rect(&self, rect: &TypedRect<T, U>) -> bool {
+        rect.is_empty() ||
+            (self.min_x() <= rect.min_x() && rect.max_x() <= self.max_x() &&
+             self.min_y() <= rect.min_y() && rect.max_y() <= self.max_y())
     }
 
     #[inline]
@@ -311,6 +324,39 @@ impl<T0: NumCast + Clone, Unit> TypedRect<T0, Unit> {
     }
 }
 
+impl<T: Floor + Ceil + Round + Add<T, Output=T> + Sub<T, Output=T>, U> TypedRect<T, U> {
+    /// Return a rectangle with edges rounded to integer coordinates, such that
+    /// the returned rectangle has the same set of pixel centers as the original
+    /// one.
+    /// Edges at offset 0.5 round up.
+    /// Suitable for most places where integral device coordinates
+    /// are needed, but note that any translation should be applied first to
+    /// avoid pixel rounding errors.
+    /// Note that this is *not* rounding to nearest integer if the values are negative.
+    /// They are always rounding as floor(n + 0.5).
+    pub fn round(&self) -> Self {
+        let origin = self.origin.round();
+        let size = self.origin.add_size(&self.size).round() - origin;
+        TypedRect::new(origin, TypedSize2D::new(size.x, size.y))
+    }
+
+    /// Return a rectangle with edges rounded to integer coordinates, such that
+    /// the original rectangle contains the resulting rectangle.
+    pub fn round_in(&self) -> Self {
+        let origin = self.origin.ceil();
+        let size = self.origin.add_size(&self.size).floor() - origin;
+        TypedRect::new(origin, TypedSize2D::new(size.x, size.y))
+    }
+
+    /// Return a rectangle with edges rounded to integer coordinates, such that
+    /// the original rectangle is contained in the resulting rectangle.
+    pub fn round_out(&self) -> Self {
+        let origin = self.origin.floor();
+        let size = self.origin.add_size(&self.size).ceil() - origin;
+        TypedRect::new(origin, TypedSize2D::new(size.x, size.y))
+    }
+}
+
 // Convenience functions for common casts
 impl<T: NumCast + Clone, Unit> TypedRect<T, Unit> {
     pub fn as_f32(&self) -> TypedRect<f32, Unit> {
@@ -318,6 +364,14 @@ impl<T: NumCast + Clone, Unit> TypedRect<T, Unit> {
     }
 
     pub fn as_uint(&self) -> TypedRect<usize, Unit> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i32(&self) -> TypedRect<i32, Unit> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i64(&self) -> TypedRect<i64, Unit> {
         self.cast().unwrap()
     }
 }
@@ -450,6 +504,18 @@ mod tests {
         // Points beyond the bottom-left corner.
         assert!(!r.contains(&Point2D::new(-25, 210)));
         assert!(!r.contains(&Point2D::new(-15, 220)));
+
+        let r = Rect::new(Point2D::new(-20.0, 15.0), Size2D::new(100.0, 200.0));
+        assert!(r.contains_rect(&r));
+        assert!(!r.contains_rect(&r.translate(&Point2D::new( 0.1,  0.0))));
+        assert!(!r.contains_rect(&r.translate(&Point2D::new(-0.1,  0.0))));
+        assert!(!r.contains_rect(&r.translate(&Point2D::new( 0.0,  0.1))));
+        assert!(!r.contains_rect(&r.translate(&Point2D::new( 0.0, -0.1))));
+        // Empty rectangles are always considered as contained in other rectangles,
+        // even if their origin is not.
+        let p = Point2D::new(1.0, 1.0);
+        assert!(!r.contains(&p));
+        assert!(r.contains_rect(&Rect::new(p, Size2D::zero())));
     }
 
     #[test]
@@ -517,4 +583,34 @@ mod tests {
         assert!(!Rect::new(Point2D::new(10u32, 10u32), Size2D::new(1u32, 1u32)).is_empty());
     }
 
+    #[test]
+    fn test_round() {
+        let mut x = -2.0;
+        let mut y = -2.0;
+        let mut w = -2.0;
+        let mut h = -2.0;
+        while x < 2.0 {
+            while y < 2.0 {
+                while w < 2.0 {
+                    while h < 2.0 {
+                        let rect = Rect::new(Point2D::new(x, y), Size2D::new(w, h));
+
+                        assert!(rect.contains_rect(&rect.round_in()));
+                        assert!(rect.round_in().inflate(1.0, 1.0).contains_rect(&rect));
+
+                        assert!(rect.round_out().contains_rect(&rect));
+                        assert!(rect.inflate(1.0, 1.0).contains_rect(&rect.round_out()));
+
+                        assert!(rect.inflate(1.0, 1.0).contains_rect(&rect.round()));
+                        assert!(rect.round().inflate(1.0, 1.0).contains_rect(&rect));
+
+                        h += 0.1;
+                    }
+                    w += 0.1;
+                }
+                y += 0.1;
+            }
+            x += 0.1
+        }
+    }
 }

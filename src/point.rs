@@ -10,7 +10,7 @@
 use length::{Length, UnknownUnit};
 use scale_factor::ScaleFactor;
 use size::TypedSize2D;
-use num::Zero;
+use num::*;
 
 use num_traits::{Float, NumCast};
 use std::fmt;
@@ -20,6 +20,7 @@ use std::cmp::{PartialEq, Eq};
 use std::hash::{Hash, Hasher};
 
 define_vector! {
+    /// A 2d Point taged with a unit.
     #[derive(RustcDecodable, RustcEncodable)]
     pub struct TypedPoint2D<T, U> {
         pub x: T,
@@ -27,6 +28,9 @@ define_vector! {
     }
 }
 
+/// Default 2d point type with no unit.
+///
+/// Point2D provides the same methods as TypedPoint2D.
 pub type Point2D<T> = TypedPoint2D<T, UnknownUnit>;
 
 impl<T: Copy, U> Copy for TypedPoint2D<T, U> {}
@@ -83,17 +87,22 @@ impl<T: Clone, U> TypedPoint2D<T, U> {
 }
 
 impl<T: Clone, U> TypedPoint2D<T, U> {
+    /// Returns self.x as a Length carrying the unit.
     pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x.clone()) }
+
+    /// Returns self.y as a Length carrying the unit.
     pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y.clone()) }
 }
 
 impl<T, U> TypedPoint2D<T, U>
 where T: Copy + Mul<T, Output=T> + Add<T, Output=T> + Sub<T, Output=T> {
+    /// Dot product.
     #[inline]
     pub fn dot(self, other: TypedPoint2D<T, U>) -> T {
         self.x * other.x + self.y * other.y
     }
 
+    /// Returns the norm of the cross product [self.x, self.y, 0] x [other.x, other.y, 0]..
     #[inline]
     pub fn cross(self, other: TypedPoint2D<T, U>) -> T {
         self.x * other.y - self.y * other.x
@@ -191,6 +200,24 @@ impl<T: Clone, U> TypedPoint2D<T, U> {
     }
 }
 
+impl<T: Round, U> TypedPoint2D<T, U> {
+    pub fn round(&self) -> Self {
+        TypedPoint2D::new(self.x.round(), self.y.round())
+    }
+}
+
+impl<T: Ceil, U> TypedPoint2D<T, U> {
+    pub fn ceil(&self) -> Self {
+        TypedPoint2D::new(self.x.ceil(), self.y.ceil())
+    }
+}
+
+impl<T: Floor, U> TypedPoint2D<T, U> {
+    pub fn floor(&self) -> Self {
+        TypedPoint2D::new(self.x.floor(), self.y.floor())
+    }
+}
+
 impl<T0: NumCast + Clone, U> TypedPoint2D<T0, U> {
     /// Cast from one numeric representation to another, preserving the units.
     pub fn cast<T1: NumCast + Clone>(&self) -> Option<TypedPoint2D<T1, U>> {
@@ -210,9 +237,18 @@ impl<T: NumCast + Clone, U> TypedPoint2D<T, U> {
     pub fn as_uint(&self) -> TypedPoint2D<usize, U> {
         self.cast().unwrap()
     }
+
+    pub fn as_i32(&self) -> TypedPoint2D<i32, U> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i64(&self) -> TypedPoint2D<i64, U> {
+        self.cast().unwrap()
+    }
 }
 
 define_vector! {
+    /// A 3d Point taged with a unit.
     #[derive(RustcDecodable, RustcEncodable)]
     pub struct TypedPoint3D<T, U> {
         pub x: T,
@@ -221,6 +257,9 @@ define_vector! {
     }
 }
 
+/// Default 3d point type with no unit.
+///
+/// Point3D provides the same methods as TypedPoint3D.
 pub type Point3D<T> = TypedPoint3D<T, UnknownUnit>;
 
 impl<T: Hash, U> Hash for TypedPoint3D<T, U> {
@@ -280,8 +319,13 @@ impl<T: Clone, U> TypedPoint3D<T, U> {
 }
 
 impl<T: Clone, U> TypedPoint3D<T, U> {
+    /// Returns self.x as a Length carrying the unit.
     pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x.clone()) }
+
+    /// Returns self.y as a Length carrying the unit.
     pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y.clone()) }
+
+    /// Returns self.z as a Length carrying the unit.
     pub fn z_typed(&self) -> Length<T, U> { Length::new(self.z.clone()) }
 }
 
@@ -289,6 +333,8 @@ impl<T: Mul<T, Output=T> +
         Add<T, Output=T> +
         Sub<T, Output=T> +
         Copy, U> TypedPoint3D<T, U> {
+
+    // Dot product.
     #[inline]
     pub fn dot(self, other: TypedPoint3D<T, U>) -> T {
         self.x * other.x +
@@ -296,6 +342,7 @@ impl<T: Mul<T, Output=T> +
         self.z * other.z
     }
 
+    // Cross product.
     #[inline]
     pub fn cross(self, other: TypedPoint3D<T, U>) -> TypedPoint3D<T, U> {
         TypedPoint3D::new(self.y * other.z - self.z * other.y,
@@ -355,7 +402,57 @@ impl<T: Clone, U> TypedPoint3D<T, U> {
     }
 }
 
+impl<T: Round, U> TypedPoint3D<T, U> {
+    pub fn round(&self) -> Self {
+        TypedPoint3D::new(self.x.round(), self.y.round(), self.z.round())
+    }
+}
+
+impl<T: Ceil, U> TypedPoint3D<T, U> {
+    pub fn ceil(&self) -> Self {
+        TypedPoint3D::new(self.x.ceil(), self.y.ceil(), self.z.ceil())
+    }
+}
+
+impl<T: Floor, U> TypedPoint3D<T, U> {
+    pub fn floor(&self) -> Self {
+        TypedPoint3D::new(self.x.floor(), self.y.floor(), self.z.floor())
+    }
+}
+
+impl<T0: NumCast + Clone, U> TypedPoint3D<T0, U> {
+    /// Cast from one numeric representation to another, preserving the units.
+    pub fn cast<T1: NumCast + Clone>(&self) -> Option<TypedPoint3D<T1, U>> {
+        match (NumCast::from(self.x.clone()),
+               NumCast::from(self.y.clone()),
+               NumCast::from(self.z.clone())) {
+            (Some(x), Some(y), Some(z)) => Some(TypedPoint3D::new(x, y, z)),
+            _ => None
+        }
+    }
+}
+
+// Convenience functions for common casts
+impl<T: NumCast + Clone, U> TypedPoint3D<T, U> {
+    pub fn as_f32(&self) -> TypedPoint3D<f32, U> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_uint(&self) -> TypedPoint3D<usize, U> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i32(&self) -> TypedPoint3D<i32, U> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i64(&self) -> TypedPoint3D<i64, U> {
+        self.cast().unwrap()
+    }
+}
+
 define_vector! {
+    /// A 4d Point taged with a unit.
     #[derive(RustcDecodable, RustcEncodable)]
     pub struct TypedPoint4D<T, U> {
         pub x: T,
@@ -365,6 +462,9 @@ define_vector! {
     }
 }
 
+/// Default 4d point with no unit.
+///
+/// Point4D provides the same methods as TypedPoint4D.
 pub type Point4D<T> = TypedPoint4D<T, UnknownUnit>;
 
 impl<T: Copy, U> Copy for TypedPoint4D<T, U> {}
@@ -431,10 +531,31 @@ impl<T: Clone, U> TypedPoint4D<T, U> {
 }
 
 impl<T: Clone, U> TypedPoint4D<T, U> {
+    /// Returns self.x as a Length carrying the unit.
     pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x.clone()) }
+
+    /// Returns self.y as a Length carrying the unit.
     pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y.clone()) }
+
+    /// Returns self.z as a Length carrying the unit.
     pub fn z_typed(&self) -> Length<T, U> { Length::new(self.z.clone()) }
+
+    /// Returns self.w as a Length carrying the unit.
     pub fn w_typed(&self) -> Length<T, U> { Length::new(self.w.clone()) }
+}
+
+impl<T: Copy + Div<T, Output=T>, U> TypedPoint4D<T, U> {
+    /// Convert into a 2d point.
+    #[inline]
+    pub fn to_2d(self) -> TypedPoint2D<T, U> {
+        TypedPoint2D::new(self.x / self.w, self.y / self.w)
+    }
+
+    /// Convert into a 3d point.
+    #[inline]
+    pub fn to_3d(self) -> TypedPoint3D<T, U> {
+        TypedPoint3D::new(self.x / self.w, self.y / self.w, self.z / self.w)
+    }
 }
 
 impl<T: Clone + Add<T, Output=T>, U> Add for TypedPoint4D<T, U> {
@@ -486,6 +607,56 @@ impl<T: Clone, U> TypedPoint4D<T, U> {
     /// Tag a unitless value with units.
     pub fn from_untyped(p: &Point4D<T>) -> TypedPoint4D<T, U> {
         TypedPoint4D::new(p.x.clone(), p.y.clone(), p.z.clone(), p.w.clone())
+    }
+}
+
+impl<T: Round, U> TypedPoint4D<T, U> {
+    pub fn round(&self) -> Self {
+        TypedPoint4D::new(self.x.round(), self.y.round(), self.z.round(), self.w.round())
+    }
+}
+
+impl<T: Ceil, U> TypedPoint4D<T, U> {
+    pub fn ceil(&self) -> Self {
+        TypedPoint4D::new(self.x.ceil(), self.y.ceil(), self.z.ceil(), self.w.ceil())
+    }
+}
+
+impl<T: Floor, U> TypedPoint4D<T, U> {
+    pub fn floor(&self) -> Self {
+        TypedPoint4D::new(self.x.floor(), self.y.floor(), self.z.floor(), self.w.floor())
+    }
+}
+
+impl<T0: NumCast + Clone, U> TypedPoint4D<T0, U> {
+    /// Cast from one numeric representation to another, preserving the units.
+    pub fn cast<T1: NumCast + Clone>(&self) -> Option<TypedPoint4D<T1, U>> {
+        match (NumCast::from(self.x.clone()),
+               NumCast::from(self.y.clone()),
+               NumCast::from(self.z.clone()),
+               NumCast::from(self.w.clone())) {
+            (Some(x), Some(y), Some(z), Some(w)) => Some(TypedPoint4D::new(x, y, z, w)),
+            _ => None
+        }
+    }
+}
+
+// Convenience functions for common casts
+impl<T: NumCast + Clone, U> TypedPoint4D<T, U> {
+    pub fn as_f32(&self) -> TypedPoint4D<f32, U> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_uint(&self) -> TypedPoint4D<usize, U> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i32(&self) -> TypedPoint4D<i32, U> {
+        self.cast().unwrap()
+    }
+
+    pub fn as_i64(&self) -> TypedPoint4D<i64, U> {
+        self.cast().unwrap()
     }
 }
 
