@@ -22,7 +22,7 @@ use std::cmp::{PartialEq, Eq};
 use std::hash::{Hash, Hasher};
 
 define_vector! {
-    /// A 2d vector tagged with a unit.
+    /// A 2d Vector tagged with a unit.
     #[derive(RustcDecodable, RustcEncodable)]
     pub struct TypedVector2D<T, U> {
         pub x: T,
@@ -37,10 +37,8 @@ pub type Vector2D<T> = TypedVector2D<T, UnknownUnit>;
 
 impl<T: Copy, U> Copy for TypedVector2D<T, U> {}
 
-impl<T: Clone, U> Clone for TypedVector2D<T, U> {
-    fn clone(&self) -> TypedVector2D<T, U> {
-        TypedVector2D::new(self.x.clone(), self.y.clone())
-    }
+impl<T: Copy, U> Clone for TypedVector2D<T, U> {
+    fn clone(&self) -> TypedVector2D<T, U> { *self }
 }
 
 impl<T: PartialEq, U> PartialEq<TypedVector2D<T, U>> for TypedVector2D<T, U> {
@@ -58,8 +56,8 @@ impl<T: Hash, U> Hash for TypedVector2D<T, U> {
     }
 }
 
-impl<T: Zero, U> TypedVector2D<T, U> {
-    /// Constructor, setting all copmonents to zero.
+impl<T: Copy + Zero, U> TypedVector2D<T, U> {
+    /// Constructor, setting all components to zero.
     #[inline]
     pub fn zero() -> TypedVector2D<T, U> {
         TypedVector2D::new(Zero::zero(), Zero::zero())
@@ -78,48 +76,51 @@ impl<T: fmt::Display, U> fmt::Display for TypedVector2D<T, U> {
     }
 }
 
-impl<T, U> TypedVector2D<T, U> {
+impl<T: Copy, U> TypedVector2D<T, U> {
     /// Constructor taking scalar values directly.
     #[inline]
     pub fn new(x: T, y: T) -> TypedVector2D<T, U> {
         TypedVector2D { x: x, y: y, _unit: PhantomData }
     }
-}
-
-impl<T: Clone, U> TypedVector2D<T, U> {
-    /// Convert this vector into a point.
-    /// This is the equivalent of TypedPoint2D::origin() + *self.
-    #[inline]
-    pub fn to_point(&self) -> TypedPoint2D<T, U> {
-        TypedPoint2D::new(self.x.clone(), self.y.clone())
-    }
 
     /// Constructor taking properly typed Lengths instead of scalar values.
     #[inline]
     pub fn from_lengths(x: Length<T, U>, y: Length<T, U>) -> TypedVector2D<T, U> {
-        TypedVector2D::new(x.get(), y.get())
+        TypedVector2D::new(x.0, y.0)
     }
 
     /// Returns self.x as a Length carrying the unit.
     #[inline]
-    pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x.clone()) }
+    pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x) }
 
     /// Returns self.y as a Length carrying the unit.
     #[inline]
-    pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y.clone()) }
+    pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y) }
 
     /// Drop the units, preserving only the numeric value.
+    #[inline]
     pub fn to_untyped(&self) -> Vector2D<T> {
-        TypedVector2D::new(self.x.clone(), self.y.clone())
+        TypedVector2D::new(self.x, self.y)
     }
 
     /// Tag a unitless value with units.
+    #[inline]
     pub fn from_untyped(p: &Vector2D<T>) -> TypedVector2D<T, U> {
-        TypedVector2D::new(p.x.clone(), p.y.clone())
+        TypedVector2D::new(p.x, p.y)
     }
 
     #[inline]
-    pub fn to_array(&self) -> [T; 2] { [self.x.clone(), self.y.clone()] }
+    pub fn to_array(&self) -> [T; 2] {
+        [self.x, self.y]
+    }
+
+    /// Convert into a 2d point.
+    ///
+    /// This is equivalent to TypedPoint2D::origin + *self.
+    #[inline]
+    pub fn to_point(self) -> TypedPoint2D<T, U> {
+        TypedPoint2D::new(self.x, self.y)
+    }
 }
 
 impl<T, U> TypedVector2D<T, U>
@@ -137,28 +138,34 @@ where T: Copy + Mul<T, Output=T> + Add<T, Output=T> + Sub<T, Output=T> {
     }
 }
 
-impl<T: Clone + Add<T, Output=T>, U> Add for TypedVector2D<T, U> {
+impl<T: Copy + Add<T, Output=T>, U> Add for TypedVector2D<T, U> {
     type Output = TypedVector2D<T, U>;
     fn add(self, other: TypedVector2D<T, U>) -> TypedVector2D<T, U> {
         TypedVector2D::new(self.x + other.x, self.y + other.y)
     }
 }
 
-impl<T: Clone + Add<T, Output=T>, U> Add<TypedSize2D<T, U>> for TypedVector2D<T, U> {
+impl<T: Copy + Add<T, Output=T>, U> Add<TypedSize2D<T, U>> for TypedVector2D<T, U> {
     type Output = TypedVector2D<T, U>;
     fn add(self, other: TypedSize2D<T, U>) -> TypedVector2D<T, U> {
         TypedVector2D::new(self.x + other.width, self.y + other.height)
     }
 }
 
-impl<T: Clone + Sub<T, Output=T>, U> Sub for TypedVector2D<T, U> {
+impl<T: Copy + Add<T, Output=T>, U> TypedVector2D<T, U> {
+    pub fn add_size(&self, other: &TypedSize2D<T, U>) -> TypedVector2D<T, U> {
+        TypedVector2D::new(self.x + other.width, self.y + other.height)
+    }
+}
+
+impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedVector2D<T, U> {
     type Output = TypedVector2D<T, U>;
     fn sub(self, other: TypedVector2D<T, U>) -> TypedVector2D<T, U> {
         TypedVector2D::new(self.x - other.x, self.y - other.y)
     }
 }
 
-impl <T: Clone + Neg<Output=T>, U> Neg for TypedVector2D<T, U> {
+impl <T: Copy + Neg<Output=T>, U> Neg for TypedVector2D<T, U> {
     type Output = TypedVector2D<T, U>;
     #[inline]
     fn neg(self) -> TypedVector2D<T, U> {
@@ -238,22 +245,21 @@ impl<T: Floor, U> TypedVector2D<T, U> {
     }
 }
 
-impl<T0: NumCast + Clone, U> TypedVector2D<T0, U> {
+impl<T: NumCast + Copy, U> TypedVector2D<T, U> {
     /// Cast from one numeric representation to another, preserving the units.
     ///
     /// When casting from floating point to integer coordinates, the decimals are truncated
     /// as one would expect from a simple cast, but this behavior does not always marke sense
     /// geometrically. Consider using round(), ceil or floor() before casting.
-    pub fn cast<T1: NumCast + Clone>(&self) -> Option<TypedVector2D<T1, U>> {
-        match (NumCast::from(self.x.clone()), NumCast::from(self.y.clone())) {
+    pub fn cast<NewT: NumCast + Copy>(&self) -> Option<TypedVector2D<NewT, U>> {
+        match (NumCast::from(self.x), NumCast::from(self.y)) {
             (Some(x), Some(y)) => Some(TypedVector2D::new(x, y)),
             _ => None
         }
     }
-}
 
-// Convenience functions for common casts
-impl<T: NumCast + Clone, U> TypedVector2D<T, U> {
+    // Convenience functions for common casts
+
     /// Cast into an f32 vector.
     pub fn to_f32(&self) -> TypedVector2D<f32, U> {
         self.cast().unwrap()
@@ -310,20 +316,23 @@ impl<T: Hash, U> Hash for TypedVector3D<T, U> {
     }
 }
 
-impl<T: Zero, U> TypedVector3D<T, U> {
+impl<T: Copy + Zero, U> TypedVector3D<T, U> {
     /// Constructor, setting all copmonents to zero.
     #[inline]
     pub fn zero() -> TypedVector3D<T, U> {
         TypedVector3D::new(Zero::zero(), Zero::zero(), Zero::zero())
     }
+
+    #[inline]
+    pub fn to_3d(&self) -> TypedVector3D<T, U> {
+        TypedVector3D::new(self.x, self.y, Zero::zero())
+    }
 }
 
 impl<T: Copy, U> Copy for TypedVector3D<T, U> {}
 
-impl<T: Clone, U> Clone for TypedVector3D<T, U> {
-    fn clone(&self) -> TypedVector3D<T, U> {
-        TypedVector3D::new(self.x.clone(), self.y.clone(), self.z.clone())
-    }
+impl<T: Copy, U> Clone for TypedVector3D<T, U> {
+    fn clone(&self) -> TypedVector3D<T, U> { *self }
 }
 
 impl<T: PartialEq, U> PartialEq<TypedVector3D<T, U>> for TypedVector3D<T, U> {
@@ -346,51 +355,52 @@ impl<T: fmt::Display, U> fmt::Display for TypedVector3D<T, U> {
     }
 }
 
-impl<T, U> TypedVector3D<T, U> {
+impl<T: Copy, U> TypedVector3D<T, U> {
     /// Constructor taking scalar values directly.
     #[inline]
     pub fn new(x: T, y: T, z: T) -> TypedVector3D<T, U> {
         TypedVector3D { x: x, y: y, z: z, _unit: PhantomData }
     }
-}
-
-impl<T: Clone, U> TypedVector3D<T, U> {
-    /// Convert this vector into a point.
-    /// This is the equivalent of TypedPoint3D::origin() + *self.
-    #[inline]
-    pub fn to_point(&self) -> TypedPoint3D<T, U> {
-        TypedPoint3D::new(self.x.clone(), self.y.clone(), self.z.clone())
-    }
 
     /// Constructor taking properly typed Lengths instead of scalar values.
     #[inline]
     pub fn from_lengths(x: Length<T, U>, y: Length<T, U>, z: Length<T, U>) -> TypedVector3D<T, U> {
-        TypedVector3D::new(x.get(), y.get(), z.get())
+        TypedVector3D::new(x.0, y.0, z.0)
     }
 
     /// Returns self.x as a Length carrying the unit.
     #[inline]
-    pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x.clone()) }
+    pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x) }
 
     /// Returns self.y as a Length carrying the unit.
     #[inline]
-    pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y.clone()) }
+    pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y) }
 
     /// Returns self.z as a Length carrying the unit.
     #[inline]
-    pub fn z_typed(&self) -> Length<T, U> { Length::new(self.z.clone()) }
+    pub fn z_typed(&self) -> Length<T, U> { Length::new(self.z) }
 
     #[inline]
-    pub fn to_array(&self) -> [T; 3] { [self.x.clone(), self.y.clone(), self.z.clone()] }
+    pub fn to_array(&self) -> [T; 3] { [self.x, self.y, self.z] }
+
+    /// Convert into a 3d point.
+    ///
+    /// This is equivalent to TypedPoint3D::origin + *self.
+    #[inline]
+    pub fn to_point(self) -> TypedPoint3D<T, U> {
+        TypedPoint3D::new(self.x, self.y, self.z)
+    }
 
     /// Drop the units, preserving only the numeric value.
+    #[inline]
     pub fn to_untyped(&self) -> Vector3D<T> {
-        TypedVector3D::new(self.x.clone(), self.y.clone(), self.z.clone())
+        TypedVector3D::new(self.x, self.y, self.z)
     }
 
     /// Tag a unitless value with units.
+    #[inline]
     pub fn from_untyped(p: &Vector3D<T>) -> TypedVector3D<T, U> {
-        TypedVector3D::new(p.x.clone(), p.y.clone(), p.z.clone())
+        TypedVector3D::new(p.x, p.y, p.z)
     }
 }
 
@@ -416,7 +426,7 @@ impl<T: Mul<T, Output=T> +
     }
 }
 
-impl<T: Clone + Add<T, Output=T>, U> Add for TypedVector3D<T, U> {
+impl<T: Copy + Add<T, Output=T>, U> Add for TypedVector3D<T, U> {
     type Output = TypedVector3D<T, U>;
     fn add(self, other: TypedVector3D<T, U>) -> TypedVector3D<T, U> {
         TypedVector3D::new(self.x + other.x,
@@ -425,7 +435,7 @@ impl<T: Clone + Add<T, Output=T>, U> Add for TypedVector3D<T, U> {
     }
 }
 
-impl<T: Clone + Sub<T, Output=T>, U> Sub for TypedVector3D<T, U> {
+impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedVector3D<T, U> {
     type Output = TypedVector3D<T, U>;
     fn sub(self, other: TypedVector3D<T, U>) -> TypedVector3D<T, U> {
         TypedVector3D::new(self.x - other.x,
@@ -434,7 +444,7 @@ impl<T: Clone + Sub<T, Output=T>, U> Sub for TypedVector3D<T, U> {
     }
 }
 
-impl <T: Clone + Neg<Output=T>, U> Neg for TypedVector3D<T, U> {
+impl <T: Copy + Neg<Output=T>, U> Neg for TypedVector3D<T, U> {
     type Output = TypedVector3D<T, U>;
     #[inline]
     fn neg(self) -> TypedVector3D<T, U> {
@@ -482,24 +492,23 @@ impl<T: Floor, U> TypedVector3D<T, U> {
     }
 }
 
-impl<T0: NumCast + Clone, U> TypedVector3D<T0, U> {
+impl<T: NumCast + Copy, U> TypedVector3D<T, U> {
     /// Cast from one numeric representation to another, preserving the units.
     ///
     /// When casting from floating point to integer coordinates, the decimals are truncated
     /// as one would expect from a simple cast, but this behavior does not always marke sense
     /// geometrically. Consider using round(), ceil or floor() before casting.
-    pub fn cast<T1: NumCast + Clone>(&self) -> Option<TypedVector3D<T1, U>> {
-        match (NumCast::from(self.x.clone()),
-               NumCast::from(self.y.clone()),
-               NumCast::from(self.z.clone())) {
+    pub fn cast<NewT: NumCast + Copy>(&self) -> Option<TypedVector3D<NewT, U>> {
+        match (NumCast::from(self.x),
+               NumCast::from(self.y),
+               NumCast::from(self.z)) {
             (Some(x), Some(y), Some(z)) => Some(TypedVector3D::new(x, y, z)),
             _ => None
         }
     }
-}
 
-// Convenience functions for common casts
-impl<T: NumCast + Clone, U> TypedVector3D<T, U> {
+    // Convenience functions for common casts
+
     /// Cast into an f32 vector.
     pub fn to_f32(&self) -> TypedVector3D<f32, U> {
         self.cast().unwrap()
@@ -551,13 +560,8 @@ pub type Vector4D<T> = TypedVector4D<T, UnknownUnit>;
 
 impl<T: Copy, U> Copy for TypedVector4D<T, U> {}
 
-impl<T: Clone, U> Clone for TypedVector4D<T, U> {
-    fn clone(&self) -> TypedVector4D<T, U> {
-        TypedVector4D::new(self.x.clone(),
-                          self.y.clone(),
-                          self.z.clone(),
-                          self.w.clone())
-    }
+impl<T: Copy, U> Clone for TypedVector4D<T, U> {
+    fn clone(&self) -> TypedVector4D<T, U> { *self }
 }
 
 impl<T: PartialEq, U> PartialEq<TypedVector4D<T, U>> for TypedVector4D<T, U> {
@@ -577,7 +581,7 @@ impl<T: Hash, U> Hash for TypedVector4D<T, U> {
     }
 }
 
-impl<T: Zero, U> TypedVector4D<T, U> {
+impl<T: Copy + Zero, U> TypedVector4D<T, U> {
     /// Constructor, setting all copmonents to zero.
     #[inline]
     pub fn zero() -> TypedVector4D<T, U> {
@@ -597,22 +601,12 @@ impl<T: fmt::Display, U> fmt::Display for TypedVector4D<T, U> {
     }
 }
 
-impl<T, U> TypedVector4D<T, U> {
+impl<T: Copy, U> TypedVector4D<T, U> {
     /// Constructor taking scalar values directly.
     #[inline]
     pub fn new(x: T, y: T, z: T, w: T) -> TypedVector4D<T, U> {
         TypedVector4D { x: x, y: y, z: z, w: w, _unit: PhantomData }
     }
-}
-
-impl<T: Clone, U> TypedVector4D<T, U> {
-    /// Convert this vector into a point.
-    /// This is the equivalent of TypedPoint4D::origin() + *self.
-    #[inline]
-    pub fn to_point(&self) -> TypedPoint4D<T, U> {
-        TypedPoint4D::new(self.x.clone(), self.y.clone(), self.z.clone(), self.w.clone())
-    }
-
 
     /// Constructor taking properly typed Lengths instead of scalar values.
     #[inline]
@@ -620,51 +614,65 @@ impl<T: Clone, U> TypedVector4D<T, U> {
                         y: Length<T, U>,
                         z: Length<T, U>,
                         w: Length<T, U>) -> TypedVector4D<T, U> {
-        TypedVector4D::new(x.get(), y.get(), z.get(), w.get())
+        TypedVector4D::new(x.0, y.0, z.0, w.0)
     }
 
     /// Returns self.x as a Length carrying the unit.
-    pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x.clone()) }
+    #[inline]
+    pub fn x_typed(&self) -> Length<T, U> { Length::new(self.x) }
 
     /// Returns self.y as a Length carrying the unit.
-    pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y.clone()) }
+    #[inline]
+    pub fn y_typed(&self) -> Length<T, U> { Length::new(self.y) }
 
     /// Returns self.z as a Length carrying the unit.
-    pub fn z_typed(&self) -> Length<T, U> { Length::new(self.z.clone()) }
+    #[inline]
+    pub fn z_typed(&self) -> Length<T, U> { Length::new(self.z) }
 
     /// Returns self.w as a Length carrying the unit.
-    pub fn w_typed(&self) -> Length<T, U> { Length::new(self.w.clone()) }
+    #[inline]
+    pub fn w_typed(&self) -> Length<T, U> { Length::new(self.w) }
 
+    /// Drop the units, preserving only the numeric value.
+    #[inline]
+    pub fn to_untyped(&self) -> Vector4D<T> {
+        TypedVector4D::new(self.x, self.y, self.z, self.w)
+    }
+
+    /// Tag a unitless value with units.
+    #[inline]
+    pub fn from_untyped(p: &Vector4D<T>) -> TypedVector4D<T, U> {
+        TypedVector4D::new(p.x, p.y, p.z, p.w)
+    }
+
+    #[inline]
     pub fn to_array(&self) -> [T; 4] {
-        [self.x.clone(), self.y.clone(), self.z.clone(), self.w.clone()]
+        [self.x, self.y, self.z, self.w]
     }
 
     /// Convert into a 2d vector.
     #[inline]
     pub fn to_2d(self) -> TypedVector2D<T, U> {
-        TypedVector2D::new(self.x.clone(), self.y.clone())
+        TypedVector2D::new(self.x, self.y)
     }
 
     /// Convert into a 3d vector.
     #[inline]
     pub fn to_3d(self) -> TypedVector3D<T, U> {
-        TypedVector3D::new(self.x.clone(), self.y.clone(), self.z.clone())
-    }
-
-    /// Drop the units, preserving only the numeric value.
-    pub fn to_untyped(&self) -> Vector4D<T> {
-        TypedVector4D::new(self.x.clone(), self.y.clone(), self.z.clone(), self.w.clone())
-    }
-
-    /// Tag a unitless value with units.
-    pub fn from_untyped(p: &Vector4D<T>) -> TypedVector4D<T, U> {
-        TypedVector4D::new(p.x.clone(), p.y.clone(), p.z.clone(), p.w.clone())
+        TypedVector3D::new(self.x, self.y, self.z)
     }
 }
 
-impl<T: Copy, U> TypedVector4D<T, U> {}
+impl<T: Copy + One, U> TypedVector4D<T, U> {
+    /// Convert into a 4d point.
+    #[inline]
+    pub fn to_point(self) -> TypedPoint4D<T, U> {
+        TypedPoint4D::new(self.x, self.y, self.z, One::one())
+    }
+}
 
-impl<T: Clone + Add<T, Output=T>, U> Add for TypedVector4D<T, U> {
+
+impl<T: Copy + Add<T, Output=T>, U> Add for TypedVector4D<T, U> {
     type Output = TypedVector4D<T, U>;
     fn add(self, other: TypedVector4D<T, U>) -> TypedVector4D<T, U> {
         TypedVector4D::new(self.x + other.x,
@@ -674,17 +682,17 @@ impl<T: Clone + Add<T, Output=T>, U> Add for TypedVector4D<T, U> {
     }
 }
 
-impl<T: Clone + Sub<T, Output=T>, U> Sub for TypedVector4D<T, U> {
+impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedVector4D<T, U> {
     type Output = TypedVector4D<T, U>;
     fn sub(self, other: TypedVector4D<T, U>) -> TypedVector4D<T, U> {
         TypedVector4D::new(self.x - other.x,
-                           self.y - other.y,
-                           self.z - other.z,
-                           self.w - other.w)
+                          self.y - other.y,
+                          self.z - other.z,
+                          self.w - other.w)
     }
 }
 
-impl <T: Clone + Neg<Output=T>, U> Neg for TypedVector4D<T, U> {
+impl <T: Copy + Neg<Output=T>, U> Neg for TypedVector4D<T, U> {
     type Output = TypedVector4D<T, U>;
     #[inline]
     fn neg(self) -> TypedVector4D<T, U> {
@@ -731,25 +739,24 @@ impl<T: Floor, U> TypedVector4D<T, U> {
     }
 }
 
-impl<T0: NumCast + Clone, U> TypedVector4D<T0, U> {
+impl<T: NumCast + Copy, U> TypedVector4D<T, U> {
     /// Cast from one numeric representation to another, preserving the units.
     ///
     /// When casting from floating point to integer coordinates, the decimals are truncated
     /// as one would expect from a simple cast, but this behavior does not always marke sense
     /// geometrically. Consider using round(), ceil or floor() before casting.
-    pub fn cast<T1: NumCast + Clone>(&self) -> Option<TypedVector4D<T1, U>> {
-        match (NumCast::from(self.x.clone()),
-               NumCast::from(self.y.clone()),
-               NumCast::from(self.z.clone()),
-               NumCast::from(self.w.clone())) {
+    pub fn cast<NewT: NumCast + Copy>(&self) -> Option<TypedVector4D<NewT, U>> {
+        match (NumCast::from(self.x),
+               NumCast::from(self.y),
+               NumCast::from(self.z),
+               NumCast::from(self.w)) {
             (Some(x), Some(y), Some(z), Some(w)) => Some(TypedVector4D::new(x, y, z, w)),
             _ => None
         }
     }
-}
 
-// Convenience functions for common casts
-impl<T: NumCast + Clone, U> TypedVector4D<T, U> {
+    // Convenience functions for common casts
+
     /// Cast into an f32 vector.
     pub fn to_f32(&self) -> TypedVector4D<f32, U> {
         self.cast().unwrap()
@@ -837,9 +844,7 @@ mod typedvector2d {
     use super::TypedVector2D;
     use scale_factor::ScaleFactor;
 
-    #[derive(Debug, Copy, Clone)]
     pub enum Mm {}
-    #[derive(Debug, Copy, Clone)]
     pub enum Cm {}
 
     pub type Vector2DMm<T> = TypedVector2D<T, Mm>;

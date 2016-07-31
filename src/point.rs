@@ -11,11 +11,12 @@ use super::UnknownUnit;
 use length::Length;
 use scale_factor::ScaleFactor;
 use size::TypedSize2D;
+use vector::{TypedVector2D, TypedVector3D, TypedVector4D};
 use num::*;
 
 use num_traits::{Float, NumCast};
 use std::fmt;
-use std::ops::{Add, Neg, Mul, Sub, Div};
+use std::ops::{Add, Mul, Sub, Div};
 use std::marker::PhantomData;
 use std::cmp::{PartialEq, Eq};
 use std::hash::{Hash, Hasher};
@@ -65,6 +66,11 @@ impl<T: Copy + Zero, U> TypedPoint2D<T, U> {
     /// An alias to fn origin.
     #[inline]
     pub fn zero() -> TypedPoint2D<T, U> { TypedPoint2D::origin() }
+
+    #[inline]
+    pub fn to_3d(&self) -> TypedPoint3D<T, U> {
+        TypedPoint3D::new(self.x, self.y, Zero::zero())
+    }
 }
 
 impl<T: fmt::Debug, U> fmt::Debug for TypedPoint2D<T, U> {
@@ -116,26 +122,19 @@ impl<T: Copy, U> TypedPoint2D<T, U> {
     pub fn to_array(&self) -> [T; 2] {
         [self.x, self.y]
     }
-}
 
-impl<T, U> TypedPoint2D<T, U>
-where T: Copy + Mul<T, Output=T> + Add<T, Output=T> + Sub<T, Output=T> {
-    /// Dot product.
+    /// Convert into a 2d vector.
+    ///
+    /// This is equivalent to *self - TypedPoint2D::origin().
     #[inline]
-    pub fn dot(self, other: TypedPoint2D<T, U>) -> T {
-        self.x * other.x + self.y * other.y
-    }
-
-    /// Returns the norm of the cross product [self.x, self.y, 0] x [other.x, other.y, 0]..
-    #[inline]
-    pub fn cross(self, other: TypedPoint2D<T, U>) -> T {
-        self.x * other.y - self.y * other.x
+    pub fn to_vector(self) -> TypedVector2D<T, U> {
+        TypedVector2D::new(self.x, self.y)
     }
 }
 
-impl<T: Copy + Add<T, Output=T>, U> Add for TypedPoint2D<T, U> {
+impl<T: Copy + Add<T, Output=T>, U> Add<TypedVector2D<T, U>> for TypedPoint2D<T, U> {
     type Output = TypedPoint2D<T, U>;
-    fn add(self, other: TypedPoint2D<T, U>) -> TypedPoint2D<T, U> {
+    fn add(self, other: TypedVector2D<T, U>) -> TypedPoint2D<T, U> {
         TypedPoint2D::new(self.x + other.x, self.y + other.y)
     }
 }
@@ -154,17 +153,9 @@ impl<T: Copy + Add<T, Output=T>, U> TypedPoint2D<T, U> {
 }
 
 impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedPoint2D<T, U> {
-    type Output = TypedPoint2D<T, U>;
-    fn sub(self, other: TypedPoint2D<T, U>) -> TypedPoint2D<T, U> {
-        TypedPoint2D::new(self.x - other.x, self.y - other.y)
-    }
-}
-
-impl <T: Copy + Neg<Output=T>, U> Neg for TypedPoint2D<T, U> {
-    type Output = TypedPoint2D<T, U>;
-    #[inline]
-    fn neg(self) -> TypedPoint2D<T, U> {
-        TypedPoint2D::new(-self.x, -self.y)
+    type Output = TypedVector2D<T, U>;
+    fn sub(self, other: TypedPoint2D<T, U>) -> TypedVector2D<T, U> {
+        TypedVector2D::new(self.x - other.x, self.y - other.y)
     }
 }
 
@@ -373,6 +364,14 @@ impl<T: Copy, U> TypedPoint3D<T, U> {
     #[inline]
     pub fn to_array(&self) -> [T; 3] { [self.x, self.y, self.z] }
 
+    /// Convert into a 3d vector.
+    ///
+    /// This is equivalent to *self - TypedPoint3D::origin().
+    #[inline]
+    pub fn to_vector(self) -> TypedVector3D<T, U> {
+        TypedVector3D::new(self.x, self.y, self.z)
+    }
+
     /// Drop the units, preserving only the numeric value.
     #[inline]
     pub fn to_untyped(&self) -> Point3D<T> {
@@ -408,9 +407,9 @@ impl<T: Mul<T, Output=T> +
     }
 }
 
-impl<T: Copy + Add<T, Output=T>, U> Add for TypedPoint3D<T, U> {
+impl<T: Copy + Add<T, Output=T>, U> Add<TypedVector3D<T, U>> for TypedPoint3D<T, U> {
     type Output = TypedPoint3D<T, U>;
-    fn add(self, other: TypedPoint3D<T, U>) -> TypedPoint3D<T, U> {
+    fn add(self, other: TypedVector3D<T, U>) -> TypedPoint3D<T, U> {
         TypedPoint3D::new(self.x + other.x,
                           self.y + other.y,
                           self.z + other.z)
@@ -418,19 +417,11 @@ impl<T: Copy + Add<T, Output=T>, U> Add for TypedPoint3D<T, U> {
 }
 
 impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedPoint3D<T, U> {
-    type Output = TypedPoint3D<T, U>;
-    fn sub(self, other: TypedPoint3D<T, U>) -> TypedPoint3D<T, U> {
-        TypedPoint3D::new(self.x - other.x,
-                          self.y - other.y,
-                          self.z - other.z)
-    }
-}
-
-impl <T: Copy + Neg<Output=T>, U> Neg for TypedPoint3D<T, U> {
-    type Output = TypedPoint3D<T, U>;
-    #[inline]
-    fn neg(self) -> TypedPoint3D<T, U> {
-        TypedPoint3D::new(-self.x, -self.y, -self.z)
+    type Output = TypedVector3D<T, U>;
+    fn sub(self, other: TypedPoint3D<T, U>) -> TypedVector3D<T, U> {
+        TypedVector3D::new(self.x - other.x,
+                           self.y - other.y,
+                           self.z - other.z)
     }
 }
 
@@ -633,6 +624,14 @@ impl<T: Copy, U> TypedPoint4D<T, U> {
     }
 }
 
+impl<T: Copy + Zero + Div<Output=T>, U> TypedPoint4D<T, U> {
+    /// Convert into a 4d vector.
+    #[inline]
+    pub fn to_vector(self) -> TypedVector4D<T, U> {
+        TypedVector4D::new(self.x / self.w, self.y / self.w, self.z / self.w, Zero::zero())
+    }
+}
+
 impl<T: Copy + Div<T, Output=T>, U> TypedPoint4D<T, U> {
     /// Convert into a 2d point.
     #[inline]
@@ -647,9 +646,9 @@ impl<T: Copy + Div<T, Output=T>, U> TypedPoint4D<T, U> {
     }
 }
 
-impl<T: Copy + Add<T, Output=T>, U> Add for TypedPoint4D<T, U> {
+impl<T: Copy + Add<T, Output=T>, U> Add<TypedVector4D<T, U>> for TypedPoint4D<T, U> {
     type Output = TypedPoint4D<T, U>;
-    fn add(self, other: TypedPoint4D<T, U>) -> TypedPoint4D<T, U> {
+    fn add(self, other: TypedVector4D<T, U>) -> TypedPoint4D<T, U> {
         TypedPoint4D::new(self.x + other.x,
                           self.y + other.y,
                           self.z + other.z,
@@ -658,20 +657,12 @@ impl<T: Copy + Add<T, Output=T>, U> Add for TypedPoint4D<T, U> {
 }
 
 impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedPoint4D<T, U> {
-    type Output = TypedPoint4D<T, U>;
-    fn sub(self, other: TypedPoint4D<T, U>) -> TypedPoint4D<T, U> {
-        TypedPoint4D::new(self.x - other.x,
-                          self.y - other.y,
-                          self.z - other.z,
-                          self.w - other.w)
-    }
-}
-
-impl <T: Copy + Neg<Output=T>, U> Neg for TypedPoint4D<T, U> {
-    type Output = TypedPoint4D<T, U>;
-    #[inline]
-    fn neg(self) -> TypedPoint4D<T, U> {
-        TypedPoint4D::new(-self.x, -self.y, -self.z, -self.w)
+    type Output = TypedVector4D<T, U>;
+    fn sub(self, other: TypedPoint4D<T, U>) -> TypedVector4D<T, U> {
+        TypedVector4D::new(self.x - other.x,
+                           self.y - other.y,
+                           self.z - other.z,
+                           self.w - other.w)
     }
 }
 
@@ -779,21 +770,6 @@ mod point2d {
     }
 
     #[test]
-    pub fn test_dot() {
-        let p1: Point2D<f32> = Point2D::new(2.0, 7.0);
-        let p2: Point2D<f32> = Point2D::new(13.0, 11.0);
-        assert_eq!(p1.dot(p2), 103.0);
-    }
-
-    #[test]
-    pub fn test_cross() {
-        let p1: Point2D<f32> = Point2D::new(4.0, 7.0);
-        let p2: Point2D<f32> = Point2D::new(13.0, 8.0);
-        let r = p1.cross(p2);
-        assert_eq!(r, -59.0);
-    }
-
-    #[test]
     pub fn test_min() {
         let p1 = Point2D::new(1.0, 3.0);
         let p2 = Point2D::new(2.0, 2.0);
@@ -826,16 +802,6 @@ mod typedpoint2d {
     pub type Point2DCm<T> = TypedPoint2D<T, Cm>;
 
     #[test]
-    pub fn test_add() {
-        let p1 = Point2DMm::new(1.0, 2.0);
-        let p2 = Point2DMm::new(3.0, 4.0);
-
-        let result = p1 + p2;
-
-        assert_eq!(result, Point2DMm::new(4.0, 6.0));
-    }
-
-    #[test]
     pub fn test_scalar_mul() {
         let p1 = Point2DMm::new(1.0, 2.0);
         let cm_per_mm: ScaleFactor<f32, Mm, Cm> = ScaleFactor::new(0.1);
@@ -849,21 +815,6 @@ mod typedpoint2d {
 #[cfg(test)]
 mod point3d {
     use super::Point3D;
-
-    #[test]
-    pub fn test_dot() {
-        let p1 = Point3D::new(7.0, 21.0, 32.0);
-        let p2 = Point3D::new(43.0, 5.0, 16.0);
-        assert_eq!(p1.dot(p2), 918.0);
-    }
-
-    #[test]
-    pub fn test_cross() {
-        let p1 = Point3D::new(4.0, 7.0, 9.0);
-        let p2 = Point3D::new(13.0, 8.0, 3.0);
-        let p3 = p1.cross(p2);
-        assert_eq!(p3, Point3D::new(-51.0, 105.0, -59.0));
-    }
 
     #[test]
     pub fn test_min() {
@@ -889,26 +840,6 @@ mod point3d {
 #[cfg(test)]
 mod point4d {
     use super::Point4D;
-
-    #[test]
-    pub fn test_add() {
-        let p1 = Point4D::new(7.0, 21.0, 32.0, 1.0);
-        let p2 = Point4D::new(43.0, 5.0, 16.0, 2.0);
-
-        let result = p1 + p2;
-
-        assert_eq!(result, Point4D::new(50.0, 26.0, 48.0, 3.0));
-    }
-
-    #[test]
-    pub fn test_sub() {
-        let p1 = Point4D::new(7.0, 21.0, 32.0, 1.0);
-        let p2 = Point4D::new(43.0, 5.0, 16.0, 2.0);
-
-        let result = p1 - p2;
-
-        assert_eq!(result, Point4D::new(-36.0, 16.0, 16.0, -1.0));
-    }
 
     #[test]
     pub fn test_min() {

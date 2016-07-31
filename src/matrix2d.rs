@@ -10,6 +10,7 @@
 use super::UnknownUnit;
 use num::{One, Zero};
 use point::TypedPoint2D;
+use vector::TypedVector2D;
 use rect::TypedRect;
 use size::TypedSize2D;
 use std::ops::{Add, Mul, Div, Sub};
@@ -144,13 +145,13 @@ where T: Copy + Clone +
     }
 
     /// Applies a translation after self's transformation and returns the resulting matrix.
-    pub fn post_translated(&self, x: T, y: T) -> TypedMatrix2D<T, Src, Dst> {
-        self.post_mul(&TypedMatrix2D::create_translation(x, y))
+    pub fn post_translated(&self, v: &TypedVector2D<T, Dst>) -> TypedMatrix2D<T, Src, Dst> {
+        self.post_mul(&TypedMatrix2D::create_translation(v.x, v.y))
     }
 
     /// Applies a translation before self's transformation and returns the resulting matrix.
-    pub fn pre_translated(&self, x: T, y: T) -> TypedMatrix2D<T, Src, Dst> {
-        self.pre_mul(&TypedMatrix2D::create_translation(x, y))
+    pub fn pre_translated(&self, v: &TypedVector2D<T, Src>) -> TypedMatrix2D<T, Src, Dst> {
+        self.pre_mul(&TypedMatrix2D::create_translation(v.x, v.y))
     }
 
     pub fn create_scale(x: T, y: T) -> TypedMatrix2D<T, Src, Dst> {
@@ -174,6 +175,13 @@ where T: Copy + Clone +
             self.m21,     self.m22 * y,
             self.m31,     self.m32
         )
+    }
+
+    /// Returns the given vector transformed by this matrix.
+    #[inline]
+    pub fn transform_vector(&self, vec: &TypedVector2D<T, Src>) -> TypedVector2D<T, Dst> {
+        TypedVector2D::new(vec.x * self.m11 + vec.y * self.m21,
+                           vec.x * self.m12 + vec.y * self.m22)
     }
 
     /// Returns the given point transformed by this matrix.
@@ -269,8 +277,10 @@ impl<T: ApproxEq<T>, Src, Dst> TypedMatrix2D<T, Src, Dst> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use vector::Vector2D;
 
     type Mat = Matrix2D<f32>;
+    type Vec2 = Vector2D<f32>;
 
     #[test]
     pub fn test_inverse_simple() {
@@ -295,8 +305,8 @@ mod test {
 
     #[test]
     pub fn test_pre_post() {
-        let m1 = Matrix2D::identity().post_scaled(1.0, 2.0).post_translated(1.0, 2.0);
-        let m2 = Matrix2D::identity().pre_translated(1.0, 2.0).pre_scaled(1.0, 2.0);
+        let m1 = Matrix2D::identity().post_scaled(1.0, 2.0).post_translated(&Vec2::new(1.0, 2.0));
+        let m2 = Matrix2D::identity().pre_translated(&Vec2::new(1.0, 2.0)).pre_scaled(1.0, 2.0);
         assert!(m1.approx_eq(&m2));
     }
 }

@@ -16,6 +16,7 @@ use num_traits::NumCast;
 use std::fmt;
 use std::ops::{Mul, Div};
 use std::marker::PhantomData;
+use vector::TypedVector2D;
 
 /// A 2d size tagged with a unit.
 define_vector! {
@@ -176,6 +177,11 @@ impl<T: Copy, U> TypedSize2D<T, U> {
     /// Tag a unitless value with units.
     pub fn from_untyped(p: &Size2D<T>) -> TypedSize2D<T, U> {
         TypedSize2D::new(p.width, p.height)
+    }
+
+    /// Return the vector [self.width, self.height].
+    pub fn to_vector(&self) -> TypedVector2D<T, U> {
+        TypedVector2D::new(self.width, self.height)
     }
 }
 

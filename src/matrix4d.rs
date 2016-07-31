@@ -10,7 +10,8 @@
 use super::UnknownUnit;
 use approxeq::ApproxEq;
 use trig::Trig;
-use point::{TypedPoint2D, TypedPoint3D, TypedPoint4D};
+use point::{TypedPoint2D, TypedPoint3D};
+use vector::{TypedVector2D, TypedVector3D};
 use matrix2d::TypedMatrix2D;
 use scale_factor::ScaleFactor;
 use num::{One, Zero};
@@ -354,12 +355,41 @@ where T: Copy + Clone +
         TypedMatrix4D::create_scale(scale.get(), scale.get(), scale.get())
     }
 
+    /// Returns the given 2d vector transformed by this matrix.
+    ///
+    /// The input point must be use the unit Src, and the returned point has the unit Dst.
+    #[inline]
+    pub fn transform_vector2d(&self, p: &TypedVector2D<T, Src>) -> TypedVector2D<T, Dst> {
+        let w = p.x * self.m14 + p.y * self.m24;
+        TypedVector2D::new(
+            (p.x * self.m11 + p.y * self.m21) / w,
+            (p.x * self.m12 + p.y * self.m22) / w,
+        )
+    }
+
     /// Returns the given 2d point transformed by this matrix.
     ///
     /// The input point must be use the unit Src, and the returned point has the unit Dst.
     #[inline]
-    pub fn transform_point(&self, p: &TypedPoint2D<T, Src>) -> TypedPoint2D<T, Dst> {
-        self.transform_point4d(&TypedPoint4D::new(p.x, p.y, Zero::zero(), One::one())).to_2d()
+    pub fn transform_point2d(&self, p: &TypedPoint2D<T, Src>) -> TypedPoint2D<T, Dst> {
+        let w = p.x * self.m14 + p.y * self.m24 + self.m44;
+        TypedPoint2D::new(
+            (p.x * self.m11 + p.y * self.m21 + self.m41) / w,
+            (p.x * self.m12 + p.y * self.m22 + self.m42) / w,
+        )
+    }
+
+    /// Returns the given 3d vector transformed by this matrix.
+    ///
+    /// The input point must be use the unit Src, and the returned point has the unit Dst.
+    #[inline]
+    pub fn transform_vector3d(&self, p: &TypedVector3D<T, Src>) -> TypedVector3D<T, Dst> {
+        let w = p.x * self.m14 + p.y * self.m24 + p.z * self.m34;
+        TypedVector3D::new(
+            (p.x * self.m11 + p.y * self.m21 + p.z * self.m31) / w,
+            (p.x * self.m12 + p.y * self.m22 + p.z * self.m32) / w,
+            (p.x * self.m13 + p.y * self.m23 + p.z * self.m33) / w,
+        )
     }
 
     /// Returns the given 3d point transformed by this matrix.
@@ -367,7 +397,23 @@ where T: Copy + Clone +
     /// The input point must be use the unit Src, and the returned point has the unit Dst.
     #[inline]
     pub fn transform_point3d(&self, p: &TypedPoint3D<T, Src>) -> TypedPoint3D<T, Dst> {
-        self.transform_point4d(&TypedPoint4D::new(p.x, p.y, p.z, One::one())).to_3d()
+        let w = p.x * self.m14 + p.y * self.m24 + p.z * self.m34 + self.m44;
+        TypedPoint3D::new(
+            (p.x * self.m11 + p.y * self.m21 + p.z * self.m31 + self.m41) / w,
+            (p.x * self.m12 + p.y * self.m22 + p.z * self.m32 + self.m42) / w,
+            (p.x * self.m13 + p.y * self.m23 + p.z * self.m33 + self.m43) / w,
+        )
+    }
+
+/*
+    /// Returns the given 4d vector transformed by this matrix.
+    ///
+    /// The input point must be use the unit Src, and the returned point has the unit Dst.
+    /// This operation assumes that p.w is zero.
+    #[inline]
+    pub fn transform_vector4d(&self, v: &TypedVector4D<T, Src>) -> TypedVector4D<T, Dst> {
+        let v3 = self.transform_vector3d(&v.to_3d());
+        TypedVector3D::new(v3.x, v3.y, v3.z, Zero::zero())
     }
 
     /// Returns the given 4d point transformed by this matrix.
@@ -375,14 +421,13 @@ where T: Copy + Clone +
     /// The input point must be use the unit Src, and the returned point has the unit Dst.
     #[inline]
     pub fn transform_point4d(&self, p: &TypedPoint4D<T, Src>) -> TypedPoint4D<T, Dst> {
-        let x = p.x * self.m11 + p.y * self.m21 + p.z * self.m31 + self.m41;
-        let y = p.x * self.m12 + p.y * self.m22 + p.z * self.m32 + self.m42;
-        let z = p.x * self.m13 + p.y * self.m23 + p.z * self.m33 + self.m43;
-        let w = p.x * self.m14 + p.y * self.m24 + p.z * self.m34 + self.m44;
-        TypedPoint4D::new(x, y, z, w)
+        let p3 = self.transform_point3d(&p.to_3d());
+        TypedVector4D::new(p3.x, p3.y, p3.z, Zero::zero())
     }
+*/
 
     /// Create a 3d translation matrix
+    #[inline]
     pub fn create_translation(x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
         let (_0, _1): (T, T) = (Zero::zero(), One::one());
         TypedMatrix4D::row_major(
@@ -394,13 +439,13 @@ where T: Copy + Clone +
     }
 
     /// Returns a matrix with a translation applied before self's transformation.
-    pub fn pre_translated(&self, x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
-        self.pre_mul(&TypedMatrix4D::create_translation(x, y, z))
+    pub fn pre_translated(&self, v: &TypedVector3D<T, Src>) -> TypedMatrix4D<T, Src, Dst> {
+        self.pre_mul(&TypedMatrix4D::create_translation(v.x, v.y, v.z))
     }
 
     /// Returns a matrix with a translation applied after self's transformation.
-    pub fn post_translated(&self, x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
-        self.post_mul(&TypedMatrix4D::create_translation(x, y, z))
+    pub fn post_translated(&self, v: &TypedVector3D<T, Dst>) -> TypedMatrix4D<T, Src, Dst> {
+        self.post_mul(&TypedMatrix4D::create_translation(v.x, v.y, v.z))
     }
 
     /// Create a 3d scale matrix
@@ -570,9 +615,11 @@ impl<T: PartialEq, Src, Dst> PartialEq for TypedMatrix4D<T, Src, Dst> {
 #[cfg(test)]
 mod tests {
     use point::Point2D;
+    use vector::Vector3D;
     use super::*;
 
     type Mf32 = Matrix4D<f32>;
+    type Vec3 = Vector3D<f32>;
 
     #[test]
     pub fn test_ortho() {
@@ -643,17 +690,17 @@ mod tests {
         assert!(m1.pre_mul(&m2).approx_eq(&Mf32::identity()));
 
         let p1 = Point2D::new(1000.0, 2000.0);
-        let p2 = m1.transform_point(&p1);
+        let p2 = m1.transform_point2d(&p1);
         assert!(p2.eq(&Point2D::new(1100.0, 2200.0)));
 
-        let p3 = m2.transform_point(&p2);
+        let p3 = m2.transform_point2d(&p2);
         assert!(p3.eq(&p1));
     }
 
     #[test]
     pub fn test_pre_post() {
-        let m1 = Matrix4D::identity().post_scaled(1.0, 2.0, 3.0).post_translated(1.0, 2.0, 3.0);
-        let m2 = Matrix4D::identity().pre_translated(1.0, 2.0, 3.0).pre_scaled(1.0, 2.0, 3.0);
+        let m1 = Matrix4D::identity().post_scaled(1.0, 2.0, 3.0).post_translated(&Vec3::new(1.0, 2.0, 3.0));
+        let m2 = Matrix4D::identity().pre_translated(&Vec3::new(1.0, 2.0, 3.0)).pre_scaled(1.0, 2.0, 3.0);
         assert!(m1.approx_eq(&m2));
     }
 }
