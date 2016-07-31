@@ -405,27 +405,6 @@ where T: Copy + Clone +
         )
     }
 
-/*
-    /// Returns the given 4d vector transformed by this matrix.
-    ///
-    /// The input point must be use the unit Src, and the returned point has the unit Dst.
-    /// This operation assumes that p.w is zero.
-    #[inline]
-    pub fn transform_vector4d(&self, v: &TypedVector4D<T, Src>) -> TypedVector4D<T, Dst> {
-        let v3 = self.transform_vector3d(&v.to_3d());
-        TypedVector3D::new(v3.x, v3.y, v3.z, Zero::zero())
-    }
-
-    /// Returns the given 4d point transformed by this matrix.
-    ///
-    /// The input point must be use the unit Src, and the returned point has the unit Dst.
-    #[inline]
-    pub fn transform_point4d(&self, p: &TypedPoint4D<T, Src>) -> TypedPoint4D<T, Dst> {
-        let p3 = self.transform_point3d(&p.to_3d());
-        TypedVector4D::new(p3.x, p3.y, p3.z, Zero::zero())
-    }
-*/
-
     /// Create a 3d translation matrix
     #[inline]
     pub fn create_translation(x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
