@@ -359,11 +359,10 @@ where T: Copy + Clone +
     ///
     /// The input point must be use the unit Src, and the returned point has the unit Dst.
     #[inline]
-    pub fn transform_vector2d(&self, p: &TypedVector2D<T, Src>) -> TypedVector2D<T, Dst> {
-        let w = p.x * self.m14 + p.y * self.m24;
+    pub fn transform_vector2d(&self, v: &TypedVector2D<T, Src>) -> TypedVector2D<T, Dst> {
         TypedVector2D::new(
-            (p.x * self.m11 + p.y * self.m21) / w,
-            (p.x * self.m12 + p.y * self.m22) / w,
+            v.x * self.m11 + v.y * self.m21,
+            v.x * self.m12 + v.y * self.m22,
         )
     }
 
@@ -383,12 +382,11 @@ where T: Copy + Clone +
     ///
     /// The input point must be use the unit Src, and the returned point has the unit Dst.
     #[inline]
-    pub fn transform_vector3d(&self, p: &TypedVector3D<T, Src>) -> TypedVector3D<T, Dst> {
-        let w = p.x * self.m14 + p.y * self.m24 + p.z * self.m34;
+    pub fn transform_vector3d(&self, v: &TypedVector3D<T, Src>) -> TypedVector3D<T, Dst> {
         TypedVector3D::new(
-            (p.x * self.m11 + p.y * self.m21 + p.z * self.m31) / w,
-            (p.x * self.m12 + p.y * self.m22 + p.z * self.m32) / w,
-            (p.x * self.m13 + p.y * self.m23 + p.z * self.m33) / w,
+            v.x * self.m11 + v.y * self.m21 + v.z * self.m31,
+            v.x * self.m12 + v.y * self.m22 + v.z * self.m32,
+            v.x * self.m13 + v.y * self.m23 + v.z * self.m33,
         )
     }
 
@@ -593,19 +591,20 @@ impl<T: PartialEq, Src, Dst> PartialEq for TypedMatrix4D<T, Src, Dst> {
 
 #[cfg(test)]
 mod tests {
-    use point::Point2D;
+    use point::{Point2D, Point3D};
     use vector::Vector3D;
     use super::*;
 
-    type Mf32 = Matrix4D<f32>;
+    type Mat = Matrix4D<f32>;
     type Vec3 = Vector3D<f32>;
+    type Point = Point3D<f32>;
 
     #[test]
     pub fn test_ortho() {
         let (left, right, bottom, top) = (0.0f32, 1.0f32, 0.1f32, 1.0f32);
         let (near, far) = (-1.0f32, 1.0f32);
-        let result = Mf32::ortho(left, right, bottom, top, near, far);
-        let expected = Mf32::row_major(
+        let result = Mat::ortho(left, right, bottom, top, near, far);
+        let expected = Mat::row_major(
              2.0,  0.0,         0.0, 0.0,
              0.0,  2.22222222,  0.0, 0.0,
              0.0,  0.0,        -1.0, 0.0,
@@ -617,15 +616,15 @@ mod tests {
 
     #[test]
     pub fn test_is_2d() {
-        assert!(Mf32::identity().is_2d());
-        assert!(Mf32::create_rotation(0.0, 0.0, 1.0, 0.7854).is_2d());
-        assert!(!Mf32::create_rotation(0.0, 1.0, 0.0, 0.7854).is_2d());
+        assert!(Mat::identity().is_2d());
+        assert!(Mat::create_rotation(0.0, 0.0, 1.0, 0.7854).is_2d());
+        assert!(!Mat::create_rotation(0.0, 1.0, 0.0, 0.7854).is_2d());
     }
 
     #[test]
     pub fn test_row_major_2d() {
-        let m1 = Mf32::row_major_2d(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
-        let m2 = Mf32::row_major(
+        let m1 = Mat::row_major_2d(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
+        let m2 = Mat::row_major(
             1.0, 2.0, 0.0, 0.0,
             3.0, 4.0, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0,
@@ -636,37 +635,37 @@ mod tests {
 
     #[test]
     pub fn test_inverse_simple() {
-        let m1 = Mf32::identity();
+        let m1 = Mat::identity();
         let m2 = m1.inverse().unwrap();
         assert!(m1.approx_eq(&m2));
     }
 
     #[test]
     pub fn test_inverse_scale() {
-        let m1 = Mf32::create_scale(1.5, 0.3, 2.1);
+        let m1 = Mat::create_scale(1.5, 0.3, 2.1);
         let m2 = m1.inverse().unwrap();
-        assert!(m1.pre_mul(&m2).approx_eq(&Mf32::identity()));
+        assert!(m1.pre_mul(&m2).approx_eq(&Mat::identity()));
     }
 
     #[test]
     pub fn test_inverse_translate() {
-        let m1 = Mf32::create_translation(-132.0, 0.3, 493.0);
+        let m1 = Mat::create_translation(-132.0, 0.3, 493.0);
         let m2 = m1.inverse().unwrap();
-        assert!(m1.pre_mul(&m2).approx_eq(&Mf32::identity()));
+        assert!(m1.pre_mul(&m2).approx_eq(&Mat::identity()));
     }
 
     #[test]
     pub fn test_inverse_rotate() {
-        let m1 = Mf32::create_rotation(0.0, 1.0, 0.0, 1.57);
+        let m1 = Mat::create_rotation(0.0, 1.0, 0.0, 1.57);
         let m2 = m1.inverse().unwrap();
-        assert!(m1.pre_mul(&m2).approx_eq(&Mf32::identity()));
+        assert!(m1.pre_mul(&m2).approx_eq(&Mat::identity()));
     }
 
     #[test]
     pub fn test_inverse_transform_point_2d() {
-        let m1 = Mf32::create_translation(100.0, 200.0, 0.0);
+        let m1 = Mat::create_translation(100.0, 200.0, 0.0);
         let m2 = m1.inverse().unwrap();
-        assert!(m1.pre_mul(&m2).approx_eq(&Mf32::identity()));
+        assert!(m1.pre_mul(&m2).approx_eq(&Mat::identity()));
 
         let p1 = Point2D::new(1000.0, 2000.0);
         let p2 = m1.transform_point2d(&p1);
@@ -681,5 +680,15 @@ mod tests {
         let m1 = Matrix4D::identity().post_scaled(1.0, 2.0, 3.0).post_translated(&Vec3::new(1.0, 2.0, 3.0));
         let m2 = Matrix4D::identity().pre_translated(&Vec3::new(1.0, 2.0, 3.0)).pre_scaled(1.0, 2.0, 3.0);
         assert!(m1.approx_eq(&m2));
+    }
+
+    #[test]
+    pub fn test_transform_vector() {
+        // Translation does not apply to vectors.
+        let m1 = Mat::create_translation(1.0, 2.0, 3.0);
+        let v1 = Vec3::new(10.0, -10.0, 3.0);
+        assert_eq!(v1, m1.transform_vector3d(&v1));
+        // While it does apply to points.
+        assert!(v1.to_point() != m1.transform_point3d(&v1.to_point()));
     }
 }

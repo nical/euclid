@@ -278,9 +278,11 @@ impl<T: ApproxEq<T>, Src, Dst> TypedMatrix2D<T, Src, Dst> {
 mod test {
     use super::*;
     use vector::Vector2D;
+    use point::Point2D;
 
     type Mat = Matrix2D<f32>;
     type Vec2 = Vector2D<f32>;
+    type Point = Point2D<f32>;
 
     #[test]
     pub fn test_inverse_simple() {
@@ -308,5 +310,13 @@ mod test {
         let m1 = Matrix2D::identity().post_scaled(1.0, 2.0).post_translated(&Vec2::new(1.0, 2.0));
         let m2 = Matrix2D::identity().pre_translated(&Vec2::new(1.0, 2.0)).pre_scaled(1.0, 2.0);
         assert!(m1.approx_eq(&m2));
+    }
+
+    #[test]
+    pub fn test_transform_vector() {
+        // Translation does not apply to vectors.
+        let m1 = Mat::create_translation(1.0, 1.0);
+        let v1 = Vec2::new(10.0, -10.0);
+        assert_eq!(v1, m1.transform_vector(&v1));
     }
 }

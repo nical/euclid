@@ -22,7 +22,9 @@ use std::cmp::{PartialEq, Eq};
 use std::hash::{Hash, Hasher};
 
 define_vector! {
-    /// A 2d Vector tagged with a unit.
+    /// A 2d vector tagged with a unit.
+    ///
+    /// A vector represents the difference between two points.
     #[derive(RustcDecodable, RustcEncodable)]
     pub struct TypedVector2D<T, U> {
         pub x: T,
@@ -294,7 +296,9 @@ impl<T: NumCast + Copy, U> TypedVector2D<T, U> {
 }
 
 define_vector! {
-    /// A 3d Vector tagged with a unit.
+    /// A 3d vector tagged with a unit.
+    ///
+    /// A vector represents the difference between two points.
     #[derive(RustcDecodable, RustcEncodable)]
     pub struct TypedVector3D<T, U> {
         pub x: T,
