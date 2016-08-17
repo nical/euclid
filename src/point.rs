@@ -15,7 +15,7 @@ use num::*;
 
 use num_traits::{Float, NumCast};
 use std::fmt;
-use std::ops::{Add, Neg, Mul, Sub, Div};
+use std::ops::{Add, Neg, Mul, Sub, Div, AddAssign, SubAssign, MulAssign, DivAssign};
 use std::marker::PhantomData;
 
 define_matrix! {
@@ -130,6 +130,38 @@ impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedPoint2D<T, U> {
     type Output = TypedPoint2D<T, U>;
     fn sub(self, other: TypedPoint2D<T, U>) -> TypedPoint2D<T, U> {
         TypedPoint2D::new(self.x - other.x, self.y - other.y)
+    }
+}
+
+impl<T: Copy + AddAssign, U> AddAssign for TypedPoint2D<T, U> {
+    #[inline]
+    fn add_assign(&mut self, other: TypedPoint2D<T, U>) {
+        self.x += other.x;
+        self.y += other.y;
+    }
+}
+
+impl<T: Copy + SubAssign, U> SubAssign for TypedPoint2D<T, U> {
+    #[inline]
+    fn sub_assign(&mut self, other: TypedPoint2D<T, U>) {
+        self.x -= other.x;
+        self.y -= other.y;
+    }
+}
+
+impl<T: Copy + MulAssign, U> MulAssign<T> for TypedPoint2D<T, U> {
+    #[inline]
+    fn mul_assign(&mut self, other: T) {
+        self.x *= other;
+        self.y *= other;
+    }
+}
+
+impl<T: Copy + DivAssign, U> DivAssign<T> for TypedPoint2D<T, U> {
+    #[inline]
+    fn div_assign(&mut self, other: T) {
+        self.x /= other;
+        self.y /= other;
     }
 }
 
@@ -374,6 +406,38 @@ impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedPoint3D<T, U> {
         TypedPoint3D::new(self.x - other.x,
                           self.y - other.y,
                           self.z - other.z)
+    }
+}
+
+impl<T: Copy + AddAssign, U> AddAssign for TypedPoint3D<T, U> {
+    fn add_assign(&mut self, other: TypedPoint3D<T, U>) {
+        self.x += other.x;
+        self.y += other.y;
+        self.z += other.z;
+    }
+}
+
+impl<T: Copy + SubAssign, U> SubAssign for TypedPoint3D<T, U> {
+    fn sub_assign(&mut self, other: TypedPoint3D<T, U>) {
+        self.x -= other.x;
+        self.y -= other.y;
+        self.z -= other.z;
+    }
+}
+
+impl<T: Copy + MulAssign, U> MulAssign<T> for TypedPoint3D<T, U> {
+    fn mul_assign(&mut self, other: T) {
+        self.x *= other;
+        self.y *= other;
+        self.z *= other;
+    }
+}
+
+impl<T: Copy + DivAssign, U> DivAssign<T> for TypedPoint3D<T, U> {
+    fn div_assign(&mut self, other: T) {
+        self.x /= other;
+        self.y /= other;
+        self.z /= other;
     }
 }
 

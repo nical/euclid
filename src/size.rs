@@ -14,7 +14,7 @@ use num::*;
 
 use num_traits::NumCast;
 use std::fmt;
-use std::ops::{Mul, Div};
+use std::ops::{Mul, Div, Add, Sub, AddAssign, SubAssign, MulAssign, DivAssign};
 use std::marker::PhantomData;
 
 /// A 2d size tagged with a unit.
@@ -139,6 +139,54 @@ impl<T: Copy + Div<T, Output=T>, U1, U2> Div<ScaleFactor<T, U1, U2>> for TypedSi
     #[inline]
     fn div(self, scale: ScaleFactor<T, U1, U2>) -> TypedSize2D<T, U1> {
         TypedSize2D::new(self.width / scale.get(), self.height / scale.get())
+    }
+}
+
+impl<T: Copy + Add<T, Output=T>, U> Add for TypedSize2D<T, U> {
+    type Output = TypedSize2D<T, U>;
+    #[inline]
+    fn add(self, other: TypedSize2D<T, U>) -> TypedSize2D<T, U> {
+        TypedSize2D::new(self.width + other.width, self.height + other.height)
+    }
+}
+
+impl<T: Copy + Sub<T, Output=T>, U> Sub for TypedSize2D<T, U> {
+    type Output = TypedSize2D<T, U>;
+    #[inline]
+    fn sub(self, other: TypedSize2D<T, U>) -> TypedSize2D<T, U> {
+        TypedSize2D::new(self.width - other.width, self.height - other.height)
+    }
+}
+
+impl<T: Copy + AddAssign, U> AddAssign for TypedSize2D<T, U> {
+    #[inline]
+    fn add_assign(&mut self, other: TypedSize2D<T, U>) {
+        self.width += other.width;
+        self.height += other.height;
+    }
+}
+
+impl<T: Copy + SubAssign, U> SubAssign for TypedSize2D<T, U> {
+    #[inline]
+    fn sub_assign(&mut self, other: TypedSize2D<T, U>) {
+        self.width -= other.width;
+        self.height -= other.height;
+    }
+}
+
+impl<T: Copy + MulAssign, U> MulAssign<T> for TypedSize2D<T, U> {
+    #[inline]
+    fn mul_assign(&mut self, other: T) {
+        self.width *= other;
+        self.height *= other;
+    }
+}
+
+impl<T: Copy + DivAssign, U> DivAssign<T> for TypedSize2D<T, U> {
+    #[inline]
+    fn div_assign(&mut self, other: T) {
+        self.width /= other;
+        self.height /= other;
     }
 }
 
