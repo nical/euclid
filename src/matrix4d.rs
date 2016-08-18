@@ -11,6 +11,7 @@ use super::{UnknownUnit, Radians};
 use approxeq::ApproxEq;
 use trig::Trig;
 use point::{TypedPoint2D, TypedPoint3D, TypedPoint4D};
+use vector::{TypedVector2D, TypedVector3D};
 use matrix2d::TypedMatrix2D;
 use scale_factor::ScaleFactor;
 use num::{One, Zero};
@@ -348,12 +349,35 @@ where T: Copy + Clone +
         TypedMatrix4D::create_scale(scale.get(), scale.get(), scale.get())
     }
 
-    /// Returns the given 2d point transformed by this matrix.
+    /// Returns the given 2d vector transformed by this matrix.
     ///
     /// The input point must be use the unit Src, and the returned point has the unit Dst.
     #[inline]
-    pub fn transform_point(&self, p: &TypedPoint2D<T, Src>) -> TypedPoint2D<T, Dst> {
-        self.transform_point4d(&TypedPoint4D::new(p.x, p.y, Zero::zero(), One::one())).to_2d()
+    pub fn transform_vector2d(&self, v: &TypedVector2D<T, Src>) -> TypedVector2D<T, Dst> {
+        TypedVector2D::new(
+            v.x * self.m11 + v.y * self.m21,
+            v.x * self.m12 + v.y * self.m22,
+        )
+    }
+
+    pub fn transform_point2d(&self, p: &TypedPoint2D<T, Src>) -> TypedPoint2D<T, Dst> {
+        let w = p.x * self.m14 + p.y * self.m24 + self.m44;
+        TypedPoint2D::new(
+            (p.x * self.m11 + p.y * self.m21 + self.m41) / w,
+            (p.x * self.m12 + p.y * self.m22 + self.m42) / w,
+        )
+    }
+
+    /// Returns the given 3d vector transformed by this matrix.
+    ///
+    /// The input point must be use the unit Src, and the returned point has the unit Dst.
+    #[inline]
+    pub fn transform_vector3d(&self, v: &TypedVector3D<T, Src>) -> TypedVector3D<T, Dst> {
+        TypedVector3D::new(
+            v.x * self.m11 + v.y * self.m21 + v.z * self.m31,
+            v.x * self.m12 + v.y * self.m22 + v.z * self.m32,
+            v.x * self.m13 + v.y * self.m23 + v.z * self.m33,
+        )
     }
 
     /// Returns the given 3d point transformed by this matrix.
@@ -388,13 +412,13 @@ where T: Copy + Clone +
     }
 
     /// Returns a matrix with a translation applied before self's transformation.
-    pub fn pre_translated(&self, x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
-        self.pre_mul(&TypedMatrix4D::create_translation(x, y, z))
+    pub fn pre_translated(&self, v: &TypedVector3D<T, Src>) -> TypedMatrix4D<T, Src, Dst> {
+        self.pre_mul(&TypedMatrix4D::create_translation(v.x, v.y, v.z))
     }
 
     /// Returns a matrix with a translation applied after self's transformation.
-    pub fn post_translated(&self, x: T, y: T, z: T) -> TypedMatrix4D<T, Src, Dst> {
-        self.post_mul(&TypedMatrix4D::create_translation(x, y, z))
+    pub fn post_translated(&self, v: &TypedVector3D<T, Dst>) -> TypedMatrix4D<T, Src, Dst> {
+        self.post_mul(&TypedMatrix4D::create_translation(v.x, v.y, v.z))
     }
 
     /// Create a 3d scale matrix
@@ -556,12 +580,14 @@ mod tests {
     use approxeq::ApproxEq;
     use matrix2d::Matrix2D;
     use point::{Point2D, Point3D, Point4D};
+    use vector::Vector3D;
     use Radians;
     use super::*;
 
     use std::f32::consts::FRAC_PI_2;
 
     type Mf32 = Matrix4D<f32>;
+    type Vec3 = Vector3D<f32>;
 
     // For convenience.
     fn rad(v: f32) -> Radians<f32> { Radians::new(v) }
@@ -569,13 +595,13 @@ mod tests {
     #[test]
     pub fn test_translation() {
         let t1 = Mf32::create_translation(1.0, 2.0, 3.0);
-        let t2 = Mf32::identity().pre_translated(1.0, 2.0, 3.0);
-        let t3 = Mf32::identity().post_translated(1.0, 2.0, 3.0);
+        let t2 = Mf32::identity().pre_translated(&Vec3::new(1.0, 2.0, 3.0));
+        let t3 = Mf32::identity().post_translated(&Vec3::new(1.0, 2.0, 3.0));
         assert_eq!(t1, t2);
         assert_eq!(t1, t3);
 
         assert_eq!(t1.transform_point3d(&Point3D::new(1.0, 1.0, 1.0)), Point3D::new(2.0, 3.0, 4.0));
-        assert_eq!(t1.transform_point(&Point2D::new(1.0, 1.0)), Point2D::new(2.0, 3.0));
+        assert_eq!(t1.transform_point2d(&Point2D::new(1.0, 1.0)), Point2D::new(2.0, 3.0));
 
         assert_eq!(t1.post_mul(&t1), Mf32::create_translation(2.0, 4.0, 6.0));
 
@@ -592,7 +618,7 @@ mod tests {
         assert_eq!(r1, r3);
 
         assert!(r1.transform_point3d(&Point3D::new(1.0, 2.0, 3.0)).approx_eq(&Point3D::new(2.0, -1.0, 3.0)));
-        assert!(r1.transform_point(&Point2D::new(1.0, 2.0)).approx_eq(&Point2D::new(2.0, -1.0)));
+        assert!(r1.transform_point2d(&Point2D::new(1.0, 2.0)).approx_eq(&Point2D::new(2.0, -1.0)));
 
         assert!(r1.post_mul(&r1).approx_eq(&Mf32::create_rotation(0.0, 0.0, 1.0, rad(FRAC_PI_2*2.0))));
 
@@ -609,7 +635,7 @@ mod tests {
         assert_eq!(s1, s3);
 
         assert!(s1.transform_point3d(&Point3D::new(2.0, 2.0, 2.0)).approx_eq(&Point3D::new(4.0, 6.0, 8.0)));
-        assert!(s1.transform_point(&Point2D::new(2.0, 2.0)).approx_eq(&Point2D::new(4.0, 6.0)));
+        assert!(s1.transform_point2d(&Point2D::new(2.0, 2.0)).approx_eq(&Point2D::new(4.0, 6.0)));
 
         assert_eq!(s1.post_mul(&s1), Mf32::create_scale(4.0, 9.0, 16.0));
 
@@ -704,10 +730,10 @@ mod tests {
         assert!(m1.pre_mul(&m2).approx_eq(&Mf32::identity()));
 
         let p1 = Point2D::new(1000.0, 2000.0);
-        let p2 = m1.transform_point(&p1);
+        let p2 = m1.transform_point2d(&p1);
         assert!(p2.eq(&Point2D::new(1100.0, 2200.0)));
 
-        let p3 = m2.transform_point(&p2);
+        let p3 = m2.transform_point2d(&p2);
         assert!(p3.eq(&p1));
     }
 
@@ -719,8 +745,8 @@ mod tests {
 
     #[test]
     pub fn test_pre_post() {
-        let m1 = Matrix4D::identity().post_scaled(1.0, 2.0, 3.0).post_translated(1.0, 2.0, 3.0);
-        let m2 = Matrix4D::identity().pre_translated(1.0, 2.0, 3.0).pre_scaled(1.0, 2.0, 3.0);
+        let m1 = Matrix4D::identity().post_scaled(1.0, 2.0, 3.0).post_translated(&Vec3::new(1.0, 2.0, 3.0));
+        let m2 = Matrix4D::identity().pre_translated(&Vec3::new(1.0, 2.0, 3.0)).pre_scaled(1.0, 2.0, 3.0);
         assert!(m1.approx_eq(&m2));
 
         let r = Mf32::create_rotation(0.0, 0.0, 1.0, rad(FRAC_PI_2));
@@ -759,5 +785,15 @@ mod tests {
         let p1 = m2.pre_mul(&m1).transform_point4d(&p);
         let p2 = m2.transform_point4d(&m1.transform_point4d(&p));
         assert!(p1.approx_eq(&p2));
+    }
+
+    #[test]
+    pub fn test_transform_vector() {
+        // Translation does not apply to vectors.
+        let m1 = Mf32::create_translation(1.0, 2.0, 3.0);
+        let v1 = Vec3::new(10.0, -10.0, 3.0);
+        assert_eq!(v1, m1.transform_vector3d(&v1));
+        // While it does apply to points.
+        assert!(v1.to_point() != m1.transform_point3d(&v1.to_point()));
     }
 }

@@ -10,6 +10,7 @@
 use super::{UnknownUnit, Radians};
 use num::{One, Zero};
 use point::TypedPoint2D;
+use vector::TypedVector2D;
 use rect::TypedRect;
 use size::TypedSize2D;
 use std::ops::{Add, Mul, Div, Sub};
@@ -148,13 +149,13 @@ where T: Copy + Clone +
     }
 
     /// Applies a translation after self's transformation and returns the resulting matrix.
-    pub fn post_translated(&self, x: T, y: T) -> TypedMatrix2D<T, Src, Dst> {
-        self.post_mul(&TypedMatrix2D::create_translation(x, y))
+    pub fn post_translated(&self, v: &TypedVector2D<T, Dst>) -> TypedMatrix2D<T, Src, Dst> {
+        self.post_mul(&TypedMatrix2D::create_translation(v.x, v.y))
     }
 
     /// Applies a translation before self's transformation and returns the resulting matrix.
-    pub fn pre_translated(&self, x: T, y: T) -> TypedMatrix2D<T, Src, Dst> {
-        self.pre_mul(&TypedMatrix2D::create_translation(x, y))
+    pub fn pre_translated(&self,  v: &TypedVector2D<T, Src>) -> TypedMatrix2D<T, Src, Dst> {
+        self.pre_mul(&TypedMatrix2D::create_translation(v.x, v.y))
     }
 
     /// Returns a scale matrix.
@@ -203,6 +204,12 @@ where T: Copy + Clone +
         self.pre_mul(&TypedMatrix2D::create_rotation(theta))
     }
 
+    /// Returns the given vector transformed by this matrix.
+    #[inline]
+    pub fn transform_vector(&self, vec: &TypedVector2D<T, Src>) -> TypedVector2D<T, Dst> {
+        TypedVector2D::new(vec.x * self.m11 + vec.y * self.m21,
+                           vec.x * self.m12 + vec.y * self.m22)
+    }
     /// Returns the given point transformed by this matrix.
     #[inline]
     pub fn transform_point(&self, point: &TypedPoint2D<T, Src>) -> TypedPoint2D<T, Dst> {
@@ -306,18 +313,19 @@ mod test {
     use approxeq::ApproxEq;
     use point::Point2D;
     use Radians;
-
     use std::f32::consts::FRAC_PI_2;
+    use vector::Vector2D;
 
     type Mat = Matrix2D<f32>;
+    type Vec2 = Vector2D<f32>;
 
     fn rad(v: f32) -> Radians<f32> { Radians::new(v) }
 
     #[test]
     pub fn test_translation() {
         let t1 = Mat::create_translation(1.0, 2.0);
-        let t2 = Mat::identity().pre_translated(1.0, 2.0);
-        let t3 = Mat::identity().post_translated(1.0, 2.0);
+        let t2 = Mat::identity().pre_translated(&Vec2::new(1.0, 2.0));
+        let t3 = Mat::identity().post_translated(&Vec2::new(1.0, 2.0));
         assert_eq!(t1, t2);
         assert_eq!(t1, t3);
 
@@ -394,8 +402,8 @@ mod test {
 
     #[test]
     pub fn test_pre_post() {
-        let m1 = Matrix2D::identity().post_scaled(1.0, 2.0).post_translated(1.0, 2.0);
-        let m2 = Matrix2D::identity().pre_translated(1.0, 2.0).pre_scaled(1.0, 2.0);
+        let m1 = Matrix2D::identity().post_scaled(1.0, 2.0).post_translated(&Vec2::new(1.0, 2.0));
+        let m2 = Matrix2D::identity().pre_translated(&Vec2::new(1.0, 2.0)).pre_scaled(1.0, 2.0);
         assert!(m1.approx_eq(&m2));
 
         let r = Mat::create_rotation(rad(FRAC_PI_2));
@@ -417,5 +425,13 @@ mod test {
         use std::mem::size_of;
         assert_eq!(size_of::<Matrix2D<f32>>(), 6*size_of::<f32>());
         assert_eq!(size_of::<Matrix2D<f64>>(), 6*size_of::<f64>());
+    }
+
+    #[test]
+    pub fn test_transform_vector() {
+        // Translation does not apply to vectors.
+        let m1 = Mat::create_translation(1.0, 1.0);
+        let v1 = Vec2::new(10.0, -10.0);
+        assert_eq!(v1, m1.transform_vector(&v1));
     }
 }
