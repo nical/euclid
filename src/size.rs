@@ -10,6 +10,7 @@
 use super::UnknownUnit;
 use length::Length;
 use scale_factor::ScaleFactor;
+use vector::TypedVector2D;
 use num::*;
 
 use num_traits::NumCast;
@@ -167,6 +168,9 @@ impl<T: Copy, U> TypedSize2D<T, U> {
 
     #[inline]
     pub fn to_array(&self) -> [T; 2] { [self.width, self.height] }
+
+    #[inline]
+    pub fn to_vector(&self) -> TypedVector2D<T, U> { TypedVector2D::new(self.width, self.height) }
 
     /// Drop the units, preserving only the numeric value.
     pub fn to_untyped(&self) -> Size2D<T> {

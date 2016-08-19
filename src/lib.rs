@@ -72,7 +72,6 @@ pub use matrix4d::{Matrix4D, TypedMatrix4D};
 pub use point::{
     Point2D, TypedPoint2D,
     Point3D, TypedPoint3D,
-    Point4D, TypedPoint4D,
 };
 pub use vector::{
     Vector2D, TypedVector2D,
