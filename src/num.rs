@@ -64,3 +64,7 @@ impl Ceil for u64 { fn ceil(self) -> Self { self } }
 impl Ceil for usize { fn ceil(self) -> Self { self } }
 impl Ceil for isize { fn ceil(self) -> Self { self } }
 
+pub trait Sqrt { fn square_root(&self) -> Self; }
+
+impl Sqrt for f32 { fn square_root(&self) -> f32 { self.sqrt() } }
+impl Sqrt for f64 { fn square_root(&self) -> f64 { self.sqrt() } }
