@@ -74,6 +74,10 @@ pub use point::{
     Point3D, TypedPoint3D,
     Point4D, TypedPoint4D,
 };
+pub use vector::{
+    Vector2D, TypedVector2D,
+    Vector3D, TypedVector3D,
+};
 pub use rect::{Rect, TypedRect};
 pub use side_offsets::{SideOffsets2D, TypedSideOffsets2D};
 #[cfg(feature = "unstable")] pub use side_offsets::SideOffsets2DSimdI32;
@@ -91,6 +95,7 @@ pub mod rect;
 pub mod scale_factor;
 pub mod side_offsets;
 pub mod size;
+pub mod vector;
 mod trig;
 
 /// The default unit.
