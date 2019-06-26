@@ -160,8 +160,11 @@ where
     /// Returns the same box3d, translated by a vector.
     #[inline]
     #[must_use]
-    pub fn translate(&self, by: &Vector3D<T, U>) -> Self {
-        Self::new(self.min + *by, self.max + *by)
+    pub fn translate(&self, by: Vector3D<T, U>) -> Self {
+        Box3D {
+            min: self.min + by,
+            max: self.max + by,
+        }
     }
 }
 
@@ -173,7 +176,7 @@ where
     /// in the box3d if they are on the front, left or top faces, but outside if they
     /// are on the back, right or bottom faces.
     #[inline]
-    pub fn contains(&self, other: &Point3D<T, U>) -> bool {
+    pub fn contains(&self, other: Point3D<T, U>) -> bool {
         self.min.x <= other.x && other.x < self.max.x
             && self.min.y <= other.y && other.y < self.max.y
             && self.min.z <= other.z && other.z < self.max.z
@@ -449,16 +452,21 @@ where
     T: Copy,
 {
     /// Drop the units, preserving only the numeric value.
+    #[inline]
     pub fn to_untyped(&self) -> Box3D<T, UnknownUnit> {
-        Box3D::new(self.min.to_untyped(), self.max.to_untyped())
+        Box3D {
+            min: self.min.to_untyped(),
+            max: self.max.to_untyped(),
+        }
     }
 
     /// Tag a unitless value with units.
+    #[inline]
     pub fn from_untyped(c: &Box3D<T, UnknownUnit>) -> Box3D<T, Unit> {
-        Box3D::new(
-            Point3D::from_untyped(&c.min),
-            Point3D::from_untyped(&c.max),
-        )
+        Box3D {
+            min: Point3D::from_untyped(c.min),
+            max: Point3D::from_untyped(c.max),
+        }
     }
 }
 
@@ -709,7 +717,7 @@ mod tests {
         let b = Box3D::from_size(size);
         assert!(b.center() == center);
         let translation = vec3(10.0, 2.5, 9.5);
-        let b = b.translate(&translation);
+        let b = b.translate(translation);
         center += translation;
         assert!(b.center() == center);
         assert!(b.max.x == 25.0);
@@ -803,7 +811,7 @@ mod tests {
     #[test]
     fn test_contains() {
         let b = Box3D::from_points(&[point3(-20.0, -20.0, -20.0), point3(20.0, 20.0, 20.0)]);
-        assert!(b.contains(&point3(-15.3, 10.5, 18.4)));
+        assert!(b.contains(point3(-15.3, 10.5, 18.4)));
     }
 
     #[test]
