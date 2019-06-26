@@ -34,7 +34,7 @@ use core::ops::{Add, Div, Mul, Sub, Range};
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(bound(serialize = "T: serde::Serialize", deserialize = "T: serde::Deserialize<'de>")))]
-pub struct Rect<T, U = UnknownUnit> {
+pub struct Rect<T, U> {
     pub origin: Point2D<T, U>,
     pub size: Size2D<T, U>,
 }
