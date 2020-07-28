@@ -18,7 +18,7 @@ use core::cmp::Ordering;
 use core::fmt;
 use core::hash::{Hash, Hasher};
 use core::marker::PhantomData;
-use core::ops::{Add, Div, Mul, Neg, Sub};
+use core::ops::{Add, Div, Mul, Neg, Sub, Deref};
 use core::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 use num_traits::{NumCast, Saturating};
 #[cfg(feature = "serde")]
@@ -39,6 +39,13 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// [`Scale`]: struct.Scale.html
 #[repr(C)]
 pub struct Length<T, Unit>(pub T, #[doc(hidden)] pub PhantomData<Unit>);
+
+impl<T, Unit> Deref for Length<T, Unit> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
 
 impl<T: Clone, U> Clone for Length<T, U> {
     fn clone(&self) -> Self {

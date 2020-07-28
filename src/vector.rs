@@ -405,7 +405,7 @@ impl<T: Float, U> Vector2D<T, U> {
     #[inline]
     #[must_use]
     pub fn normalize(self) -> Self {
-        self / self.length().get()
+        self / *self.length()
     }
 
     /// Returns the vector with length of one unit.
@@ -415,7 +415,7 @@ impl<T: Float, U> Vector2D<T, U> {
     #[inline]
     #[must_use]
     pub fn try_normalize(self) -> Option<Self> {
-        let len = self.length().get();
+        let len = *self.length();
         if len == T::zero() {
             None
         } else {
@@ -427,10 +427,10 @@ impl<T: Float, U> Vector2D<T, U> {
     #[inline]
     #[must_use]
     pub fn robust_normalize(self) -> Self {
-        let length = self.length().get();
+        let length = *self.length();
         if length.is_infinite() {
             let scaled = self / T::max_value();
-            scaled / scaled.length().get()
+            scaled / *scaled.length()
         } else {
             self / length
         }
@@ -1191,7 +1191,7 @@ impl<T: Float, U> Vector3D<T, U> {
         T: Trig,
     {
         Angle::radians(Trig::fast_atan2(
-            self.cross(other).length().get(),
+            *self.cross(other).length(),
             self.dot(other),
         ))
     }
@@ -1206,7 +1206,7 @@ impl<T: Float, U> Vector3D<T, U> {
     #[inline]
     #[must_use]
     pub fn normalize(self) -> Self {
-        self / self.length().get()
+        self / *self.length()
     }
 
     /// Returns the vector with length of one unit.
@@ -1216,7 +1216,7 @@ impl<T: Float, U> Vector3D<T, U> {
     #[inline]
     #[must_use]
     pub fn try_normalize(self) -> Option<Self> {
-        let len = self.length().get();
+        let len = *self.length();
         if len == T::zero() {
             None
         } else {
@@ -1228,10 +1228,10 @@ impl<T: Float, U> Vector3D<T, U> {
     #[inline]
     #[must_use]
     pub fn robust_normalize(self) -> Self {
-        let length = self.length().get();
+        let length = *self.length();
         if length.is_infinite() {
             let scaled = self / T::max_value();
-            scaled / scaled.length().get()
+            scaled / *scaled.length()
         } else {
             self / length
         }
