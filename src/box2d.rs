@@ -12,6 +12,7 @@ use crate::approxord::{max, min};
 use crate::nonempty::NonEmpty;
 use crate::num::*;
 use crate::point::{point2, Point2D};
+use crate::length::Length;
 use crate::rect::Rect;
 use crate::scale::Scale;
 use crate::side_offsets::SideOffsets2D;
@@ -223,13 +224,13 @@ where
     }
 
     #[inline]
-    pub fn width(&self) -> T {
-        self.max.x - self.min.x
+    pub fn width(&self) -> Length<T, U> {
+        Length::new(self.max.x - self.min.x)
     }
 
     #[inline]
-    pub fn height(&self) -> T {
-        self.max.y - self.min.y
+    pub fn height(&self) -> Length<T, U> {
+        Length::new(self.max.y - self.min.y)
     }
 
     #[inline]
@@ -614,8 +615,8 @@ mod tests {
     #[test]
     fn test_width_height() {
         let b = Box2D::new(point2(-10.0, -10.0), point2(10.0, 10.0));
-        assert!(b.width() == 20.0);
-        assert!(b.height() == 20.0);
+        assert!(b.width().get() == 20.0);
+        assert!(b.height().get() == 20.0);
     }
 
     #[test]

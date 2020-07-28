@@ -12,6 +12,7 @@ use crate::approxord::{max, min};
 use crate::nonempty::NonEmpty;
 use crate::num::*;
 use crate::point::{point3, Point3D};
+use crate::length::Length;
 use crate::scale::Scale;
 use crate::size::Size3D;
 use crate::vector::Vector3D;
@@ -215,19 +216,22 @@ where
         )
     }
 
+    /// Return this box's width as a strongly typed `Length`.
     #[inline]
-    pub fn width(&self) -> T {
-        self.max.x - self.min.x
+    pub fn width(&self) -> Length<T, U> {
+        Length::new(self.max.x - self.min.x)
     }
 
+    /// Return this box's height as a strongly typed `Length`.
     #[inline]
-    pub fn height(&self) -> T {
-        self.max.y - self.min.y
+    pub fn height(&self) -> Length<T, U> {
+        Length::new(self.max.y - self.min.y)
     }
 
+    /// Return this box's depth as a strongly typed `Length`.
     #[inline]
-    pub fn depth(&self) -> T {
-        self.max.z - self.min.z
+    pub fn depth(&self) -> Length<T, U> {
+        Length::new(self.max.z - self.min.z)
     }
 }
 
@@ -642,9 +646,9 @@ mod tests {
     #[test]
     fn test_width_height_depth() {
         let b = Box3D::new(point3(-10.0, -10.0, -10.0), point3(10.0, 10.0, 10.0));
-        assert!(b.width() == 20.0);
-        assert!(b.height() == 20.0);
-        assert!(b.depth() == 20.0);
+        assert!(b.width().get() == 20.0);
+        assert!(b.height().get() == 20.0);
+        assert!(b.depth().get() == 20.0);
     }
 
     #[test]

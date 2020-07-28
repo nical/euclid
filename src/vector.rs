@@ -205,6 +205,18 @@ impl<T, U> Vector2D<T, U> {
     {
         self.x * other.y - self.y * other.x
     }
+
+    /// Return this vector's x component as a strongly typed `Length`.
+    #[inline]
+    pub fn x(self) -> Length<T, U> {
+        Length::new(self.x)
+    }
+
+    /// Return this vector's y component as a strongly typed `Length`.
+    #[inline]
+    pub fn y(self) -> Length<T, U> {
+        Length::new(self.y)
+    }
 }
 
 impl<T: Copy, U> Vector2D<T, U> {
@@ -385,15 +397,15 @@ where
 impl<T: Float, U> Vector2D<T, U> {
     /// Returns the vector length.
     #[inline]
-    pub fn length(self) -> T {
-        self.square_length().sqrt()
+    pub fn length(self) -> Length<T, U> {
+        Length::new(self.square_length().sqrt())
     }
 
     /// Returns the vector with length of one unit.
     #[inline]
     #[must_use]
     pub fn normalize(self) -> Self {
-        self / self.length()
+        self / self.length().get()
     }
 
     /// Returns the vector with length of one unit.
@@ -403,7 +415,7 @@ impl<T: Float, U> Vector2D<T, U> {
     #[inline]
     #[must_use]
     pub fn try_normalize(self) -> Option<Self> {
-        let len = self.length();
+        let len = self.length().get();
         if len == T::zero() {
             None
         } else {
@@ -415,10 +427,10 @@ impl<T: Float, U> Vector2D<T, U> {
     #[inline]
     #[must_use]
     pub fn robust_normalize(self) -> Self {
-        let length = self.length();
+        let length = self.length().get();
         if length.is_infinite() {
             let scaled = self / T::max_value();
-            scaled / scaled.length()
+            scaled / scaled.length().get()
         } else {
             self / length
         }
@@ -973,6 +985,24 @@ impl<T, U> Vector3D<T, U> {
     {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
+
+    /// Return this vector's x component as a strongly typed `Length`.
+    #[inline]
+    pub fn x(self) -> Length<T, U> {
+        Length::new(self.x)
+    }
+
+    /// Return this vector's y component as a strongly typed `Length`.
+    #[inline]
+    pub fn y(self) -> Length<T, U> {
+        Length::new(self.y)
+    }
+
+    /// Return this vector's z component as a strongly typed `Length`.
+    #[inline]
+    pub fn z(self) -> Length<T, U> {
+        Length::new(self.z)
+    }
 }
 
 impl<T: Copy, U> Vector3D<T, U> {
@@ -1161,22 +1191,22 @@ impl<T: Float, U> Vector3D<T, U> {
         T: Trig,
     {
         Angle::radians(Trig::fast_atan2(
-            self.cross(other).length(),
+            self.cross(other).length().get(),
             self.dot(other),
         ))
     }
 
     /// Returns the vector length.
     #[inline]
-    pub fn length(self) -> T {
-        self.square_length().sqrt()
+    pub fn length(self) -> Length<T, U> {
+        Length::new(self.square_length().sqrt())
     }
 
     /// Returns the vector with length of one unit
     #[inline]
     #[must_use]
     pub fn normalize(self) -> Self {
-        self / self.length()
+        self / self.length().get()
     }
 
     /// Returns the vector with length of one unit.
@@ -1186,7 +1216,7 @@ impl<T: Float, U> Vector3D<T, U> {
     #[inline]
     #[must_use]
     pub fn try_normalize(self) -> Option<Self> {
-        let len = self.length();
+        let len = self.length().get();
         if len == T::zero() {
             None
         } else {
@@ -1198,10 +1228,10 @@ impl<T: Float, U> Vector3D<T, U> {
     #[inline]
     #[must_use]
     pub fn robust_normalize(self) -> Self {
-        let length = self.length();
+        let length = self.length().get();
         if length.is_infinite() {
             let scaled = self / T::max_value();
-            scaled / scaled.length()
+            scaled / scaled.length().get()
         } else {
             self / length
         }
@@ -1994,15 +2024,15 @@ mod vector2d {
         assert_eq!(v6.with_max_length(10.0), v6);
 
         let v4_clamped = v4.with_max_length(1.0);
-        assert!(v4_clamped.length().approx_eq(&1.0));
+        assert!(v4_clamped.length().get().approx_eq(&1.0));
         assert!(v4_clamped.normalize().approx_eq(&v4.normalize()));
 
         let v5_clamped = v5.with_max_length(1.5);
-        assert!(v5_clamped.length().approx_eq(&1.5));
+        assert!(v5_clamped.length().get().approx_eq(&1.5));
         assert!(v5_clamped.normalize().approx_eq(&v5.normalize()));
 
         let v6_clamped = v6.with_max_length(2.5);
-        assert!(v6_clamped.length().approx_eq(&2.5));
+        assert!(v6_clamped.length().get().approx_eq(&2.5));
         assert!(v6_clamped.normalize().approx_eq(&v6.normalize()));
     }
 
@@ -2253,15 +2283,15 @@ mod vector3d {
         assert_eq!(v6.with_max_length(10.0), v6);
 
         let v4_clamped = v4.with_max_length(1.0);
-        assert!(v4_clamped.length().approx_eq(&1.0));
+        assert!(v4_clamped.length().get().approx_eq(&1.0));
         assert!(v4_clamped.normalize().approx_eq(&v4.normalize()));
 
         let v5_clamped = v5.with_max_length(1.5);
-        assert!(v5_clamped.length().approx_eq(&1.5));
+        assert!(v5_clamped.length().get().approx_eq(&1.5));
         assert!(v5_clamped.normalize().approx_eq(&v5.normalize()));
 
         let v6_clamped = v6.with_max_length(2.5);
-        assert!(v6_clamped.length().approx_eq(&2.5));
+        assert!(v6_clamped.length().get().approx_eq(&2.5));
         assert!(v6_clamped.normalize().approx_eq(&v6.normalize()));
     }
 

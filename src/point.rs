@@ -153,6 +153,18 @@ impl<T, U> Point2D<T, U> {
     pub fn from_untyped(p: Point2D<T, UnknownUnit>) -> Self {
         point2(p.x, p.y)
     }
+
+    /// Return this point's x component as a strongly typed `Length`.
+    #[inline]
+    pub fn x(self) -> Length<T, U> {
+        Length::new(self.x)
+    }
+
+    /// Return this point's y component as a strongly typed `Length`.
+    #[inline]
+    pub fn y(self) -> Length<T, U> {
+        Length::new(self.y)
+    }
 }
 
 impl<T: Copy, U> Point2D<T, U> {
@@ -466,7 +478,7 @@ impl<T: Copy + Add<T, Output = T>, U> Point2D<T, U> {
 
 impl<T: Float + Sub<T, Output = T>, U> Point2D<T, U> {
     #[inline]
-    pub fn distance_to(self, other: Self) -> T {
+    pub fn distance_to(self, other: Self) -> Length<T, U> {
         (self - other).length()
     }
 }
@@ -824,6 +836,24 @@ impl<T, U> Point3D<T, U> {
     pub fn from_untyped(p: Point3D<T, UnknownUnit>) -> Self {
         point3(p.x, p.y, p.z)
     }
+
+    /// Return this point's x component as a strongly typed `Length`.
+    #[inline]
+    pub fn x(self) -> Length<T, U> {
+        Length::new(self.x)
+    }
+
+    /// Return this point's y component as a strongly typed `Length`.
+    #[inline]
+    pub fn y(self) -> Length<T, U> {
+        Length::new(self.y)
+    }
+
+    /// Return this point's z component as a strongly typed `Length`.
+    #[inline]
+    pub fn z(self) -> Length<T, U> {
+        Length::new(self.z)
+    }
 }
 
 impl<T: Copy, U> Point3D<T, U> {
@@ -1168,7 +1198,7 @@ impl<T: Copy + Add<T, Output = T>, U> Point3D<T, U> {
 
 impl<T: Float + Sub<T, Output = T>, U> Point3D<T, U> {
     #[inline]
-    pub fn distance_to(self, other: Self) -> T {
+    pub fn distance_to(self, other: Self) -> Length<T, U> {
         (self - other).length()
     }
 }
@@ -1505,12 +1535,12 @@ mod point2d {
         let p1 = Point2D::new(1.0, 2.0);
         let p2 = Point2D::new(2.0, 2.0);
 
-        assert_eq!(p1.distance_to(p2), 1.0);
+        assert_eq!(p1.distance_to(p2).get(), 1.0);
 
         let p1 = Point2D::new(1.0, 2.0);
         let p2 = Point2D::new(1.0, 4.0);
 
-        assert_eq!(p1.distance_to(p2), 2.0);
+        assert_eq!(p1.distance_to(p2).get(), 2.0);
     }
 
     mod ops {
@@ -1760,17 +1790,17 @@ mod point3d {
         let p1 = Point3D::new(1.0, 2.0, 3.0);
         let p2 = Point3D::new(2.0, 2.0, 3.0);
 
-        assert_eq!(p1.distance_to(p2), 1.0);
+        assert_eq!(p1.distance_to(p2).get(), 1.0);
 
         let p1 = Point3D::new(1.0, 2.0, 3.0);
         let p2 = Point3D::new(1.0, 4.0, 3.0);
 
-        assert_eq!(p1.distance_to(p2), 2.0);
+        assert_eq!(p1.distance_to(p2).get(), 2.0);
 
         let p1 = Point3D::new(1.0, 2.0, 3.0);
         let p2 = Point3D::new(1.0, 2.0, 6.0);
 
-        assert_eq!(p1.distance_to(p2), 3.0);
+        assert_eq!(p1.distance_to(p2).get(), 3.0);
     }
 
     #[cfg(feature = "mint")]
